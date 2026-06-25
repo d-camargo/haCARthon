@@ -11,7 +11,8 @@ CAR como **Bem Público Digital**, em modelo de **código aberto**.
 ## Onde estamos
 
 - **Fase (Duplo Diamante):** Descobrir / Definir.
-- **Recorte da solução:** _em exploração_ — a ser fixado após a fase Descobrir/Definir.
+- **Recorte da solução:** **Painel de pré-validação da Luana** (fila priorizada por risco +
+  comparação declarado×referência) **+ detecção de sobreposição em PostGIS como PoC técnica**.
 - **Formato de entrega:** **híbrido** — protótipo/mockup + vídeo de pitch, acompanhado de
   uma prova de conceito técnica enxuta para dar credibilidade.
 - **Persona primária:** Luana (analista ambiental — fila de ~12.000 análises).

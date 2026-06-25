@@ -9,22 +9,28 @@
 | Desafio | **Desafio 2 — Melhorar o acesso a dados geoespaciais do CAR** | Definido no CLAUDE.md |
 | Persona primária | **Luana** (analista ambiental estadual) | Secundária: Seu Raimundo |
 | Formato de entrega | **Híbrido**: mockup/protótipo + vídeo de pitch **+ prova de conceito técnica enxuta** | Código é opcional na avaliação; a PoC serve para dar credibilidade |
-| Recorte da solução | **Em exploração** | Será fixado após a fase Descobrir/Definir |
+| Recorte da solução | **R1 + R2 — Painel de pré-validação da Luana** (fila priorizada por risco + comparação declarado×referência) **com detecção de sobreposição em PostGIS como PoC técnica** | Definido em 2026-06-25 após a fase Descobrir/Definir |
 | Primeiro passo | Estruturar repositório + docs e iniciar git | Concluído |
 
-## 2. Próximos passos — fase Descobrir/Definir
+## 2. Fase Descobrir/Definir — andamento
 
-O recorte ainda **não** está fixado de propósito: vamos escolher com base em evidência,
-seguindo o Duplo Diamante, antes de investir em protótipo.
+O recorte é escolhido com base em evidência, seguindo o Duplo Diamante, antes de prototipar.
+Artefatos produzidos em `docs/descobrir/` e `docs/definir/`.
 
-- [ ] **Matriz CSD** (Certezas, Suposições, Dúvidas) sobre o Desafio 2.
-- [ ] **Jornada da Luana** — mapear passo a passo a validação de um cadastro e os atritos
-      (troca entre 4 sistemas, detecção de sobreposições, fila de ~12.000).
-- [ ] **Extrair atritos reais dos manuais** — Módulo de Cadastro e Retificação Dinamizada
-      (declarado × referência) como base do mecanismo de validação.
-- [ ] **Mapear o ecossistema** (RER + sistemas oficiais) para não recriar o que já existe.
-- [ ] **How Might We** — transformar as dores priorizadas em perguntas de ideação.
-- [ ] **Escolher o recorte** entre as soluções esperadas do Desafio 2 (ver seção 4).
+- [x] **Matriz CSD** — `docs/descobrir/matriz-csd.md`
+- [x] **Jornada da Luana** — `docs/descobrir/jornada-luana.md`
+- [x] **Extrair atritos dos manuais** — lido `Manual_Retificacao_Dinamizada.pdf` (págs. 1-20 e 35-40);
+      mecanismo declarado × referência e, sobretudo, **quais casos a automação não cobre** (pág. 39).
+- [x] **How Might We** + síntese — `docs/definir/sintese-oportunidades.md`
+- [ ] **Mapear o ecossistema/RER** com mais profundidade (o que estender vs. recriar).
+- [x] **Recorte escolhido (2026-06-25):** **R1 painel de pré-validação + R2 detecção de
+      sobreposição como PoC**. Entramos no 2º losango (Desenvolver/Prototipar).
+
+### Achados fundamentados (manual RD, pág. 39) — por que importam ao Desafio 2
+- **Imóveis sem base de referência não passam pela pré-validação** → caem inteiros na fila manual.
+  Ampliar/atualizar a base de referência encolhe a fila da Luana (causa-raiz).
+- **Sobreposição** (com assentamentos) e **Área de Uso Restrito** desviam da automação.
+- A Retificação/Análise Dinamizada é habilitada **município a município** → cobertura desigual.
 
 ## 3. Personas (resumo)
 
