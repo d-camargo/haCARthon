@@ -58,5 +58,5 @@ como a prova de conceito técnica enxuta da entrega híbrida. _(Confirmado pela 
 - [ ] Rascunhar a **jornada futura** da Luana com o painel (storyboard).
 - [ ] Esboçar o **wireframe** do painel (fila priorizada + comparação declarado×referência + alerta de sobreposição).
 - [x] Validar viabilidade da **PoC de sobreposição** — feita em `src/poc-sobreposicao/` (PostGIS + `ST_Intersects`/`ST_Intersection`; verificada localmente via GDAL/Spatialite). Detecta CAR×assentamento e CAR×CAR, quantifica em ha e exporta GeoJSON para o mapa.
-- [x] **Pipeline de ingestão de dados reais** — `src/pipeline-ingestao/` baixa recorte municipal do **SICAR WFS oficial** e roda a detecção. Validado em **Itaguajé/PR (364 imóveis → 491 pares conflitantes reais)**. Dados em `data/` (não versionados; data de extração registrada).
+- [x] **Pipeline de ingestão de dados reais** — `src/pipeline-ingestao/` baixa do **SICAR WFS** (imóveis) e do **INCRA i3geo WFS** (assentamentos) e roda a detecção. Validado: Itaguajé/PR (364 imóveis → **491 pares CAR×CAR**) e Querência do Norte/PR (**69 imóveis CAR sobrepondo 10 assentamentos reais do INCRA**, muitos a 100%). Dados em `data/` (não versionados; extração registrada).
 - [ ] Confirmar no RER o que já existe (map_component/Leaflet, calc_engine) para **estender** em vez de recriar.

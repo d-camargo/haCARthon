@@ -14,13 +14,13 @@ SICAR WFS oficial  ──baixar.sh──►  data/sicar/*.geojson  ──carrega
   - Campos: `cod_imovel`, `status_imovel` (AT/PE/CA), `condicao`, `municipio`, `cod_municipio_ibge`, `area`, `m_fiscal`, `tipo_imovel`.
   - Geometria **MultiPolygon** em **EPSG:4674** (SIRGAS 2000). Suporta `CQL_FILTER` (filtro por município).
   - ✅ Verificado no ar em **2026-06-25** (o PR retornou 548.159 imóveis — bate com os "548 mil" do estudo CPI/PUC-Rio).
-- **Assentamentos (INCRA):** para a detecção CAR × assentamento. ⚠️ **Verificado em 2026-06-25:**
-  a base de Projetos de Assentamento do INCRA **não tem endpoint aberto/scriptável estável** — o
-  Acervo Fundiário exige login e os geoservers/i3geo estavam fora do ar (a INDE só tem
-  "assentamentos precários" urbanos do MPOG, que **não** servem). Por isso a aquisição é
-  **fonte-agnóstica** (`baixar_assentamentos.sh`): aceita arquivo local do INCRA, um WFS configurável,
-  ou um polígono de **exemplo** para demonstrar o pipeline. *(Esta dificuldade de acesso é, ela
-  própria, evidência do problema do Desafio 2: dados de referência fragmentados e inacessíveis.)*
+- **Assentamentos (INCRA):** para a detecção CAR × assentamento. Endpoint que **funciona**
+  (verificado 2026-06-25, via Acervo Fundiário do INCRA):
+  `https://acervofundiario.incra.gov.br/i3geo/ogc.php?tema=assentamentos_<uf>` — MapServer WFS 1.0.0,
+  uma camada por UF, campos ricos (`nome_projeto`, `municipio`, `num_familias`, `fase`, `cd_sipra`…).
+  ⚠️ **Devolve coordenadas em ordem lat,lon** — `baixar_assentamentos.sh incra <uf>` corrige o eixo
+  automaticamente. *(O geoserver "oficial" do INCRA e a INDE não serviram — só o i3geo respondeu;
+  a fragilidade de acesso a dados de referência é, ela própria, o problema do Desafio 2.)*
 
 > ⚠️ Sempre **registrar a data de extração** (feito automaticamente em `data/sicar/EXTRACOES.log`
 > e manualmente em `data/README.md`). Dados baixados ficam em `data/` e **não são versionados**.
@@ -41,14 +41,12 @@ cd src/pipeline-ingestao
 ./carregar.sh ../../data/sicar/imoveis_pr_itaguaje.geojson
 
 # 3) Assentamentos (INCRA) — detecção CAR x assentamento
-#    Modo real (recomendado): baixe "Assentamento Brasil" do INCRA e use 'local':
-./baixar_assentamentos.sh local /caminho/Assentamento_Brasil.zip ../../data/sicar/imoveis_pr_itaguaje.geojson
-#    Ou WFS: ASSENT_WFS_URL=... ASSENT_LAYER=... ./baixar_assentamentos.sh wfs <imoveis.geojson>
-#    Ou exemplo (demonstra o pipeline sem dado real):
-./baixar_assentamentos.sh exemplo ../../data/sicar/imoveis_pr_itaguaje.geojson
-#    Detecção (sem Docker):
-./verificar_assentamento_local.sh ../../data/sicar/imoveis_pr_itaguaje.geojson \
-    ../../data/assentamentos/assentamentos_exemplo.geojson 100
+./baixar_assentamentos.sh incra pr                 # baixa os 309 PAs do PR (i3geo, eixo corrigido)
+./baixar.sh PR "Querência do Norte"                # município com muitos assentamentos
+./verificar_assentamento_local.sh \
+    ../../data/sicar/imoveis_pr_querencia_do_norte.geojson \
+    ../../data/assentamentos/assentamentos_pr.geojson 1000
+#  (alternativas: 'local <arquivo_incra> <imoveis>' ou 'exemplo <imoveis>')
 ```
 
 ## Arquivos
@@ -69,9 +67,10 @@ cd src/pipeline-ingestao
   travariam a validação automática e cairiam na fila da Luana.
 - Maiores sobreposições passam de **1.000 ha** — fortes candidatos a **cadastros duplicados /
   re-declarados** (exatamente o tipo de inconsistência que o motor precisa sinalizar e priorizar).
-- **CAR × assentamento** (com o PA de exemplo): vários imóveis reais sobrepõem o assentamento,
-  com até **90% da área do imóvel** dentro do PA — o caso que o manual da RD cita como bloqueador
-  da validação automática. Trocar o exemplo pela base real do INCRA não muda o código, só o dado.
+- **CAR × assentamento com dados 100% reais** (Querência do Norte/PR, 548 imóveis × 309 PAs do INCRA):
+  **69 imóveis CAR sobrepõem 10 assentamentos reais**, a maioria a **100%** (imóvel inteiro dentro do
+  PA — ex.: PA Chico Mendes, PA Che Guevara, PA Pontal do Tigre/331 famílias). É exatamente o caso que
+  o manual da Retificação Dinamizada cita como bloqueador da validação automática.
 
 ## Decisões técnicas
 - **Tolerância de área:** divisas que apenas se tocam têm interseção de área ~0 e são ignoradas;
@@ -81,7 +80,6 @@ cd src/pipeline-ingestao
   UTM 22S (EPSG:31982). Diferenças decimais entre os dois métodos não afetam a detecção.
 
 ## Próximos passos
-- Substituir o assentamento de **exemplo** pela base real do **INCRA** (modo `local`/`wfs`) quando
-  houver acesso a um endpoint/arquivo estável.
 - Servir `saida/sobreposicoes_*.geojson` como camadas no **mapa Leaflet** do painel (R1).
 - Rodar sobre uma **UF inteira** validando o desempenho do índice GiST.
+- Cruzar também com `parcelageo_<uf>` (SIGEF) e `quilombolas_<uf>` do mesmo i3geo do INCRA.
