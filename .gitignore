@@ -1,0 +1,38 @@
+# Segredos — NUNCA versionar (credenciais, CPFs, códigos SNCR, mesmo de teste)
+.env
+.env.*
+!.env.example
+*.secret
+docs/acesso-ambiente-testes.md
+
+# Base documental (PDFs pesados) — ficam locais, indexados em docs/base-documental.md
+*.pdf
+
+# Dados geoespaciais pesados — registrar origem/data em data/README.md, não versionar
+data/**
+!data/README.md
+!data/.gitkeep
+*.shp
+*.shx
+*.dbf
+*.geojson
+*.gpkg
+*.tif
+*.tiff
+*.zip
+
+# Sistema operacional / editores
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Dependências / build
+node_modules/
+dist/
+target/
+__pycache__/
+*.pyc
+.venv/
+venv/
