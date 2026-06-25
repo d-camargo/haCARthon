@@ -31,7 +31,7 @@ Logo, o MVP vai **da detecção até o rascunho de parecer/notificação (RAT)**
 | # | Decisão | Implicação |
 |---|---|---|
 | D1 | **Plugin novo e complementar** ao GeoCAR | mesmo padrão (Processing), sem acoplar ao código deles |
-| D2 | **Híbrido**: Processing provider **+** painel dockwidget | motor componível + UX de fila/parecer |
+| D2 | **Native-first**: Processing provider **+ UX nativa do QGIS** (tabela de atributos, formulário de feição, estilo por regra, Layout+Atlas, Actions). **Sem dockwidget custom no MVP** | mínimo de código de GUI; menor manutenção; UX que a analista já conhece |
 | D3 | **QGIS puro** (QgsGeometry), **PostGIS opcional** | roda offline na máquina dela; PostGIS só p/ escala (UF) |
 | D4 | **MVP = detecção + fila + parecer/RAT** | entrega fim-a-fim, fiel ao fluxo da analista |
 
@@ -43,25 +43,42 @@ QGIS
  │     ├── alg: Baixar imóveis CAR (município)
  │     ├── alg: Baixar assentamentos INCRA (UF)   [corrige eixo lat,lon]
  │     ├── alg: Detectar sobreposição (CAR×CAR, CAR×assentamento)
- │     └── alg: Gerar parecer/RAT
+ │     ├── alg: Priorizar fila (grava score na camada)
+ │     └── (opcional) Modelo que encadeia os 4 num clique
  │
- └── Painel (dockwidget) "Fila de pré-validação"  ────► UX da analista
-       ├── lista da fila priorizada por risco
-       ├── clique → zoom no imóvel + camadas de conflito
-       ├── detalhe (sobreposições, % , memória de cálculo)
-       └── botão "Gerar parecer (rascunho)"
+ └── UX NATIVA do QGIS (sem código de GUI próprio)  ──► experiência da analista
+       ├── Tabela de atributos   = a "fila" (ordena por score, filtra conflito=1)
+       ├── Estilo por regra       = conflitos em vermelho no mapa
+       ├── Formulário de feição   = detalhe (sobreposições, %, memória)
+       ├── Action de camada       = botão "Gerar parecer" na feição
+       └── Print Layout + Atlas   = parecer/RAT em PDF (1 página por imóvel)
                  │
                  ▼
-  core/ (lógica pura, testável fora do QGIS)
+  core/ (lógica pura, testável fora do QGIS — espelha o pipeline)
        ├── wfs.py        clientes SICAR / INCRA (+ axis-fix)
        ├── detector.py   interface + estratégias  ◄── QGIS puro | PostGIS
        ├── priorizacao.py  score de risco / ordenação da fila
-       └── parecer.py    template RAT (HTML→PDF)
+       └── parecer.py    monta o contexto do Atlas/parecer
 ```
 
-**Princípio-chave:** a UX (painel) e o Processing são **camadas finas** sobre o `core/`. O `core/` não
-importa nada de GUI — dá para testar a detecção e a priorização sem abrir o QGIS (e reusa exatamente a
-lógica do pipeline). Os algoritmos Processing e o painel **chamam o mesmo `core/`**.
+**Princípio-chave:** os algoritmos Processing são **camadas finas** sobre o `core/`, e a experiência
+da analista é montada com **recursos nativos do QGIS** (config, não código). O `core/` não importa
+nada de GUI — dá para testar detecção/priorização sem abrir o QGIS (reusa a lógica do pipeline).
+Nada de dockwidget custom no MVP → **a superfície de código de interface é praticamente zero**.
+
+### 4.1 UX nativa — cada necessidade → recurso do QGIS (não código)
+| Necessidade | Recurso nativo do QGIS | Esforço |
+|---|---|---|
+| Fila priorizada | **Tabela de atributos** ordenada por `score`, filtro `conflito=1` | config |
+| Destaque no mapa | **Estilo baseado em regra** (QML versionado) | template |
+| Zoom ao selecionar | *Zoom to selection* / *Flash* / **Action** | config |
+| Detalhe do imóvel | **Formulário de feição** (form designer + widget HTML/expressão) | template |
+| Botão "Gerar parecer" | **Action de camada** (dispara o Atlas) | config + script curto |
+| Parecer/RAT em PDF | **Print Layout + Atlas** (1 página/imóvel) | template de layout |
+| Encadear o fluxo | **Modelo do Processing** (Graphical Modeler) | config |
+
+> Só vira código nosso: os **algoritmos Processing** (finos), o **`core/`**, o **template de Layout/Atlas**,
+> o **QML de estilo** e 1–2 **Actions**. Reavaliar um painel custom **só** se a UX nativa falhar em teste real.
 
 ### Backend de cálculo (D3) — padrão Strategy
 ```
@@ -79,7 +96,8 @@ detector.DetectorSobreposicao (interface)
    (ou usa camadas que ela já tem abertas). Reprojeta p/ 4674, corrige eixo do INCRA, sane geometrias.
 2. **Detectar**: roda a detecção → gera a camada `conflitos` (CAR×CAR e CAR×assentamento) com
    `sobrep_ha`, `pct_imovel`, `tipo`, `contra`.
-3. **Triar**: o painel mostra a **fila priorizada por score de risco**; ela clica e o mapa foca o imóvel.
+3. **Triar**: a **tabela de atributos** (ordenada pelo `score`, filtro `conflito=1`) **é a fila**; ela
+   clica numa linha → o mapa foca o imóvel e o **formulário de feição** abre o detalhe. (UX nativa.)
 4. **Decidir**: inspeciona a sobreposição e a **memória de cálculo**; decide notificar / conformidade / PRA.
 5. **Gerar parecer (RAT)**: rascunho pré-preenchido (imóvel, divergências, enquadramento legal, recomendação)
    → exporta PDF/HTML para ela revisar e assinar.
@@ -104,10 +122,13 @@ detector.DetectorSobreposicao (interface)
 - `score = w1·norm(sobrep_ha) + w2·pct_imovel + w3·peso_tipo(assentamento>CAR×CAR) + w4·sinal_social(num_familias)`.
 - Pesos configuráveis. Saída: fila ordenada (o que falta hoje — a fila não é priorizada).
 
-### 6.4 Parecer/RAT (`core/parecer.py` + `templates/parecer_rat.html`)
-- Template com: identificação do imóvel, **lista de sobreposições** (com quem, ha, %), **memória de
-  cálculo** (inspirada na Retificação Dinamizada), **enquadramento legal** (Lei 12.651/2012) e
-  **recomendação** (notificar / conformidade / encaminhar PRA). Exporta HTML→PDF (`QTextDocument`/layout).
+### 6.4 Parecer/RAT — **Print Layout + Atlas (nativo)**
+- O parecer é um **template de Print Layout** com o Atlas ligado à camada de imóveis (1 página por
+  imóvel). Campos via **expressões/HTML frame**: identificação, **lista de sobreposições** (com quem,
+  ha, %), **memória de cálculo** (inspirada na Retificação Dinamizada), **enquadramento legal**
+  (Lei 12.651/2012) e **recomendação** (notificar / conformidade / encaminhar PRA). Exporta PDF nativo.
+- `core/parecer.py` só **prepara o contexto** (campos calculados/atributos) que o Atlas consome — não
+  gera PDF na mão. Disparável por uma **Action** na feição.
 - É **rascunho assistido**: a analista revisa e assina. Não automatiza a decisão.
 
 ## 7. Estrutura de pastas proposta
@@ -126,13 +147,16 @@ src/plugin-qgis/
 │   ├── wfs.py
 │   ├── detector.py
 │   ├── priorizacao.py
-│   └── parecer.py
-├── gui/
-│   ├── painel_dock.py
-│   └── painel.ui
-├── templates/parecer_rat.html
+│   └── parecer.py        # prepara o contexto do Atlas (não gera PDF na mão)
+├── recursos_qgis/        # artefatos NATIVOS versionados (config, não código de GUI)
+│   ├── parecer_rat.qpt   # template de Print Layout (Atlas) do parecer
+│   ├── estilo_conflito.qml  # estilo baseado em regra (conflitos em vermelho)
+│   ├── form_imovel.ui    # formulário de feição (detalhe)
+│   └── actions.json      # Actions de camada (ex.: "Gerar parecer")
+├── modelos/              # (opcional) modelo do Processing que encadeia o fluxo
 ├── resources/ (ícones)
 └── tests/  (testa core/ com os dados de Querência do Norte)
+# Sem dockwidget custom no MVP (ver D2).
 ```
 
 ## 8. Mapeamento: pipeline atual → plugin
@@ -142,7 +166,7 @@ src/plugin-qgis/
 | `baixar_assentamentos.sh incra` (axis-fix) | `processing/baixar_assentamentos_incra.py` → `core/wfs.py` |
 | `sql/11_deteccao_car.sql`, `sql/12_deteccao_assentamento.sql` | `core/detector.py` (QGIS puro) **ou** `DetectorPostGIS` |
 | `verificar_*_local.sh` | `tests/` (mesmos dados, mesmas asserções) |
-| (novo) | `core/priorizacao.py`, `core/parecer.py`, painel |
+| (novo) | `core/priorizacao.py`, `core/parecer.py` + recursos nativos (`.qpt`/`.qml`/Actions) |
 
 ## 9. Compatibilidade, dependências e distribuição
 - **QGIS ≥ 3.40** (alinha ao mínimo do GeoCAR para coexistir), PyQGIS + PyQt.
@@ -158,7 +182,7 @@ src/plugin-qgis/
 ## 11. Riscos e mitigação
 | Risco | Mitigação |
 |---|---|
-| API PyQGIS muda entre versões | lógica no `core/` (sem QGIS) reduz superfície; testes em `tests/` |
+| API PyQGIS muda entre versões | **native-first (D2): zero dockwidget custom** + lógica no `core/` (sem QGIS) → superfície de GUI mínima; testes em `tests/` |
 | Proficiência variável em QGIS | curso ENAP (ver "O Pedido", `opcao-entrega-qgis-vs-web.md` §5) |
 | Endpoints externos instáveis (INCRA) | tolerância a falha + modo "usar camadas já carregadas" + cache local |
 | Escala (UF inteira) trava QGIS puro | estratégia PostGIS opcional (D3) |

@@ -11,7 +11,7 @@
 | Formato de entrega | **Híbrido**: mockup/protótipo + vídeo de pitch **+ prova de conceito técnica enxuta** | Código é opcional na avaliação; a PoC serve para dar credibilidade |
 | Recorte da solução | **R1 + R2 — Painel de pré-validação da Luana** (fila priorizada por risco + comparação declarado×referência) **com detecção de sobreposição em PostGIS como PoC técnica** | Definido em 2026-06-25 após a fase Descobrir/Definir |
 | Primeiro passo | Estruturar repositório + docs e iniciar git | Concluído |
-| Canal de entrega | **Híbrido: plugin QGIS (analista) + painel web (gestão)**; plugin novo e complementar ao GeoCAR; QGIS puro com PostGIS opcional; MVP = detecção + fila + parecer/RAT | Decidido 2026-06-25 — arquitetura em `docs/arquitetura/plugin-qgis.md`; análise em `docs/definir/opcao-entrega-qgis-vs-web.md` |
+| Canal de entrega | **Híbrido: plugin QGIS (analista) + painel web (gestão)**; plugin novo e complementar ao GeoCAR; **native-first** (Processing + UX nativa do QGIS, sem dockwidget custom); QGIS puro com PostGIS opcional; MVP = detecção + fila + parecer/RAT | Decidido 2026-06-25 — arquitetura em `docs/arquitetura/plugin-qgis.md`; análise em `docs/definir/opcao-entrega-qgis-vs-web.md` |
 
 ## 2. Fase Descobrir/Definir — andamento
 
