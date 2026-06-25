@@ -54,4 +54,13 @@ páginas no `briefing.md` (seção 2.1).
 - **D2 → parcial:** cobertura desigual; só ~9 estados com análise automatizada relevante.
 - **D3 → parcial:** atualização gera "saltos semanais"; há reanálise com bases mais recentes (MS).
 - **D4 → respondida:** gargalos = (1) sobreposições/situação fundiária e (2) comunicação com o proprietário.
-- **Ainda abertas:** D1 (quais 4 sistemas — ver Tabela 4 do estudo, p.65), D5, D6.
+- **D1 (quais sistemas) → respondida:** fragmentação em 2 camadas (entre estados, Tabela 4; e dentro
+  da análise, 5-6 fontes). Ver `briefing.md` §2.2.
+- **D6 (o que é a análise/o que a Luana faz) → respondida:** análise técnica → notificação/RAT →
+  conformidade **ou** passivos→PRA; habilita crédito, compliance, fiscalização (Fig. 8, p.84). Ver
+  `definir/opcao-entrega-qgis-vs-web.md` §1.
+- **Nova suposição validada — "Luana usa QGIS" → CONFIRMADA:** plugin GeoCAR oficial, SFB ensina
+  geoprocessamento do CAR em QGIS, ENAP oferece curso de QGIS, papers de sobreposição em QGIS. Ver
+  `definir/opcao-entrega-qgis-vs-web.md` §2.
+- **Ainda aberta:** D5 (tipos de sobreposição mais comuns — nuance: o SICAR **admite** sobreposições na
+  inscrição; nem todo overlap é erro).
