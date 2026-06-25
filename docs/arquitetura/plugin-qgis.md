@@ -31,7 +31,7 @@ Logo, o MVP vai **da detecção até o rascunho de parecer/notificação (RAT)**
 | # | Decisão | Implicação |
 |---|---|---|
 | D1 | **Plugin novo e complementar** ao GeoCAR | mesmo padrão (Processing), sem acoplar ao código deles |
-| D2 | **Native-first**: Processing provider **+ UX nativa do QGIS** (tabela de atributos, formulário de feição, estilo por regra, Layout+Atlas, Actions). **Sem dockwidget custom no MVP** | mínimo de código de GUI; menor manutenção; UX que a analista já conhece |
+| D2 | **Native-first**: Processing provider **+ UX nativa do QGIS** (tabela de atributos, formulário de feição, estilo por regra, Layout+Atlas, Actions). **Única GUI custom = um painel de KPIs (dockwidget)** — KPI agregado não tem equivalente nativo | mínimo de código de GUI; menor manutenção; UX que a analista já conhece |
 | D3 | **QGIS puro** (QgsGeometry), **PostGIS opcional** | roda offline na máquina dela; PostGIS só p/ escala (UF) |
 | D4 | **MVP = detecção + fila + parecer/RAT** | entrega fim-a-fim, fiel ao fluxo da analista |
 
@@ -46,12 +46,15 @@ QGIS
  │     ├── alg: Priorizar fila (grava score na camada)
  │     └── (opcional) Modelo que encadeia os 4 num clique
  │
- └── UX NATIVA do QGIS (sem código de GUI próprio)  ──► experiência da analista
-       ├── Tabela de atributos   = a "fila" (ordena por score, filtra conflito=1)
-       ├── Estilo por regra       = conflitos em vermelho no mapa
-       ├── Formulário de feição   = detalhe (sobreposições, %, memória)
-       ├── Action de camada       = botão "Gerar parecer" na feição
-       └── Print Layout + Atlas   = parecer/RAT em PDF (1 página por imóvel)
+ ├── UX NATIVA do QGIS (sem código de GUI próprio)  ──► experiência da analista
+ │     ├── Tabela de atributos   = a "fila" (ordena por score, filtra conflito=1)
+ │     ├── Estilo por regra       = conflitos em vermelho no mapa
+ │     ├── Formulário de feição   = detalhe (sobreposições, %, memória)
+ │     ├── Action de camada       = botão "Gerar parecer" na feição
+ │     └── Print Layout + Atlas   = parecer/RAT em PDF (1 página por imóvel)
+ │
+ └── Painel de KPIs (ÚNICA GUI custom — dockwidget)  ──► resumo vivo (espelha o painel web)
+       └── 4 cards: imóveis · com sobreposição · assentamentos · ha em conflito (clicáveis → filtra/zoom)
                  │
                  ▼
   core/ (lógica pura, testável fora do QGIS — espelha o pipeline)
@@ -64,7 +67,8 @@ QGIS
 **Princípio-chave:** os algoritmos Processing são **camadas finas** sobre o `core/`, e a experiência
 da analista é montada com **recursos nativos do QGIS** (config, não código). O `core/` não importa
 nada de GUI — dá para testar detecção/priorização sem abrir o QGIS (reusa a lógica do pipeline).
-Nada de dockwidget custom no MVP → **a superfície de código de interface é praticamente zero**.
+A **única** GUI custom é o **painel de KPIs** (dockwidget read-only) → a superfície de código de
+interface fica **mínima e contida**.
 
 ### 4.1 UX nativa — cada necessidade → recurso do QGIS (não código)
 | Necessidade | Recurso nativo do QGIS | Esforço |
@@ -76,9 +80,11 @@ Nada de dockwidget custom no MVP → **a superfície de código de interface é 
 | Botão "Gerar parecer" | **Action de camada** (dispara o Atlas) | config + script curto |
 | Parecer/RAT em PDF | **Print Layout + Atlas** (1 página/imóvel) | template de layout |
 | Encadear o fluxo | **Modelo do Processing** (Graphical Modeler) | config |
+| **KPIs agregados** | ❌ **sem equivalente nativo** (Estatísticas = 1 métrica; Atlas = impressão) → **dockwidget custom** | código (contido) |
 
 > Só vira código nosso: os **algoritmos Processing** (finos), o **`core/`**, o **template de Layout/Atlas**,
-> o **QML de estilo** e 1–2 **Actions**. Reavaliar um painel custom **só** se a UX nativa falhar em teste real.
+> o **QML de estilo**, 1–2 **Actions** e o **painel de KPIs** (única GUI custom). Reavaliar mais painel
+> custom **só** se a UX nativa falhar em teste real.
 
 ### Backend de cálculo (D3) — padrão Strategy
 ```
@@ -131,6 +137,16 @@ detector.DetectorSobreposicao (interface)
   gera PDF na mão. Disparável por uma **Action** na feição.
 - É **rascunho assistido**: a analista revisa e assina. Não automatiza a decisão.
 
+### 6.5 Painel de KPIs (`gui/kpis_dock.py`) — única GUI custom
+- **Dockwidget read-only** com os **mesmos 4 cards do painel web** (consistência entre as faces do
+  híbrido): imóveis no recorte · com sobreposição (`conflito=1`) · assentamentos envolvidos · área em
+  conflito (Σ `sobrep_ha`).
+- **Reativo**: recalcula em `layersChanged` / `featuresChanged` / `selectionChanged` da camada de conflito.
+- **Clicável (bônus)**: clicar num card aplica `setSubsetString('conflito=1')` + zoom — liga o KPI à fila/mapa.
+- **Por que custom:** KPI agregado não tem equivalente nativo (Estatísticas mostra 1 métrica; Atlas é
+  impressão). Risco baixo: widget de **leitura**, sem formulários de edição (a parte volátil do PyQGIS).
+- Pode ser **flutuado** como janela (comportamento padrão de dockwidget).
+
 ## 7. Estrutura de pastas proposta
 ```
 src/plugin-qgis/
@@ -153,10 +169,12 @@ src/plugin-qgis/
 │   ├── estilo_conflito.qml  # estilo baseado em regra (conflitos em vermelho)
 │   ├── form_imovel.ui    # formulário de feição (detalhe)
 │   └── actions.json      # Actions de camada (ex.: "Gerar parecer")
+├── gui/                  # ÚNICA GUI custom (ver D2)
+│   ├── kpis_dock.py      # painel de KPIs (dockwidget read-only)
+│   └── kpis.ui
 ├── modelos/              # (opcional) modelo do Processing que encadeia o fluxo
 ├── resources/ (ícones)
 └── tests/  (testa core/ com os dados de Querência do Norte)
-# Sem dockwidget custom no MVP (ver D2).
 ```
 
 ## 8. Mapeamento: pipeline atual → plugin
@@ -166,7 +184,7 @@ src/plugin-qgis/
 | `baixar_assentamentos.sh incra` (axis-fix) | `processing/baixar_assentamentos_incra.py` → `core/wfs.py` |
 | `sql/11_deteccao_car.sql`, `sql/12_deteccao_assentamento.sql` | `core/detector.py` (QGIS puro) **ou** `DetectorPostGIS` |
 | `verificar_*_local.sh` | `tests/` (mesmos dados, mesmas asserções) |
-| (novo) | `core/priorizacao.py`, `core/parecer.py` + recursos nativos (`.qpt`/`.qml`/Actions) |
+| (novo) | `core/priorizacao.py`, `core/parecer.py` + recursos nativos (`.qpt`/`.qml`/Actions) + `gui/kpis_dock.py` (KPIs) |
 
 ## 9. Compatibilidade, dependências e distribuição
 - **QGIS ≥ 3.40** (alinha ao mínimo do GeoCAR para coexistir), PyQGIS + PyQt.
@@ -182,7 +200,7 @@ src/plugin-qgis/
 ## 11. Riscos e mitigação
 | Risco | Mitigação |
 |---|---|
-| API PyQGIS muda entre versões | **native-first (D2): zero dockwidget custom** + lógica no `core/` (sem QGIS) → superfície de GUI mínima; testes em `tests/` |
+| API PyQGIS muda entre versões | **native-first (D2): única GUI custom é o painel de KPIs (read-only)** + lógica no `core/` (sem QGIS) → superfície de GUI mínima e contida; testes em `tests/` |
 | Proficiência variável em QGIS | curso ENAP (ver "O Pedido", `opcao-entrega-qgis-vs-web.md` §5) |
 | Endpoints externos instáveis (INCRA) | tolerância a falha + modo "usar camadas já carregadas" + cache local |
 | Escala (UF inteira) trava QGIS puro | estratégia PostGIS opcional (D3) |
