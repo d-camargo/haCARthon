@@ -32,7 +32,9 @@ existe nas plataformas oficiais (SICAR / RER).
 ├── README.md               # Este arquivo
 ├── docs/                   # Pesquisa, decisões, briefing
 │   ├── briefing.md         # Decisões e enquadramento do problema
-│   └── base-documental.md  # Índice dos manuais/leis (PDFs ficam locais, não versionados)
+│   └── base-documental/    # Manuais, leis e material da metodologia (PDFs locais, não versionados)
+│       ├── README.md       #   índice da base documental
+│       ├── manuais/  legislacao/  metodologia/  ecossistema/
 ├── prototypes/             # Wireframes, mockups, storyboards
 ├── data/                   # Bases geoespaciais (registrar data de extração; não versionar pesados)
 ├── src/                    # Código-fonte da prova de conceito (se houver)

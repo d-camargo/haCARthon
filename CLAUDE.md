@@ -80,22 +80,22 @@ CAR (Cadastro Ambiental Rural) · SICAR (Sistema Nacional de CAR) · APP (Área 
 
 ## Base documental do projeto
 
-> 📁 **Estes documentos estão disponíveis no diretório do projeto e também estarão acessíveis ao Claude Code durante o desenvolvimento.** Consulte-os antes de pesquisar fora — são a fonte autoritativa do domínio.
+> 📁 **Estes documentos estão na pasta `docs/base-documental/`, organizados por tema** (`manuais/`, `legislacao/`, `metodologia/`, `ecossistema/`) e acessíveis ao Claude Code. Consulte-os antes de pesquisar fora — são a fonte autoritativa do domínio. Índice completo em `docs/base-documental/README.md`. Os PDFs ficam locais (não versionados); os `.md` de referência são versionados.
 
 | Documento | O que contém | Quando usar |
 |---|---|---|
-| `esperado.md` | Enunciado oficial dos 3 desafios e soluções esperadas | Definir escopo e validar aderência ao Desafio 2 |
-| `Resumo_haCARthon_Ideacao_Prototipacao.md` | Metodologia (Duplo Diamante), personas, formato de entrega | Conduzir ideação e prototipação |
-| `manual_modulo_cadastro.pdf` | Manual do Módulo de Cadastro v3.7 (etapa Geo, 5 passos, baixar imagens de satélite, vetorização) | Entender o fluxo geoespacial atual e seus atritos |
-| `manual_modulo_cadastro_pre_preenchido.pdf` | Manual do Módulo Pré-Preenchido (consulta automática SNCR/SIGEF, retificação) | Entender pré-preenchimento e integração com bases fundiárias |
-| `Manual_Retificacao_Dinamizada.pdf` | Manual da Retificação Dinamizada do SICAR (2023) — comparação declarado×referência | Entender o mecanismo de validação e divergências |
-| `Manual_Central_do_Proprietario_Possuidor.pdf` | Manual da Central do Proprietário/Possuidor | Entender o canal de atendimento/notificação ao proprietário |
-| `Acesso_ao_Mo_dulo_de_Cadastro_Pre__Preenchido.pdf` | Credenciais e passos de acesso ao ambiente de testes | Acessar o ambiente de testes (ver avisos de segurança) |
-| `CAR_DPG__Sistemas_plataformas_e_reposito_rios_do_CAR_V4_docx.pdf` | Lista de sistemas, plataformas e repositórios do CAR | Mapear o ecossistema e evitar retrabalho |
-| `Identificacao_oportunidades.pdf` | Guia de identificação de oportunidades (imersão, jornada, JTBD) | Descobrir e enquadrar o problema |
-| `ideacao_prototipacao_compressed.pdf` | Slides de ideação e prototipação | Apoiar a fase de ideação |
-| `L12651.pdf` | Lei nº 12.651/2012 — Código Florestal | Fundamentar regras de negócio (APP, RL, uso restrito) |
-| `Decreto_nº_7830.pdf` | Decreto nº 7.830/2012 — institui o SICAR | Fundamentar regras do sistema |
+| `docs/base-documental/metodologia/esperado.md` | Enunciado oficial dos 3 desafios e soluções esperadas | Definir escopo e validar aderência ao Desafio 2 |
+| `docs/base-documental/metodologia/Resumo_haCARthon_Ideacao_Prototipacao.md` | Metodologia (Duplo Diamante), personas, formato de entrega | Conduzir ideação e prototipação |
+| `docs/base-documental/manuais/manual_modulo_cadastro.pdf` | Manual do Módulo de Cadastro v3.7 (etapa Geo, 5 passos, baixar imagens de satélite, vetorização) | Entender o fluxo geoespacial atual e seus atritos |
+| `docs/base-documental/manuais/manual_modulo_cadastro_pre_preenchido.pdf` | Manual do Módulo Pré-Preenchido (consulta automática SNCR/SIGEF, retificação) | Entender pré-preenchimento e integração com bases fundiárias |
+| `docs/base-documental/manuais/Manual_Retificacao_Dinamizada.pdf` | Manual da Retificação Dinamizada do SICAR (2023) — comparação declarado×referência | Entender o mecanismo de validação e divergências |
+| `docs/base-documental/manuais/Manual_Central_do_Proprietario_Possuidor.pdf` | Manual da Central do Proprietário/Possuidor | Entender o canal de atendimento/notificação ao proprietário |
+| `docs/base-documental/ecossistema/Acesso ao Módulo de Cadastro Pré- Preenchido.pdf` | Credenciais e passos de acesso ao ambiente de testes | Acessar o ambiente de testes (ver avisos de segurança) |
+| `docs/base-documental/ecossistema/CAR DPG - Sistemas, plataformas e repositórios do CAR_V4.docx.pdf` | Lista de sistemas, plataformas e repositórios do CAR | Mapear o ecossistema e evitar retrabalho |
+| `docs/base-documental/metodologia/Identificacao_oportunidades.pdf` | Guia de identificação de oportunidades (imersão, jornada, JTBD) | Descobrir e enquadrar o problema |
+| `docs/base-documental/metodologia/ideacao_prototipacao.pdf` (+ `ideacao_prototipacao_compressed.pdf`) | Slides de ideação e prototipação (versão completa + versão leve) | Apoiar a fase de ideação |
+| `docs/base-documental/legislacao/L12651.pdf` | Lei nº 12.651/2012 — Código Florestal | Fundamentar regras de negócio (APP, RL, uso restrito) |
+| `docs/base-documental/legislacao/Decreto nº 7830.pdf` | Decreto nº 7.830/2012 — institui o SICAR | Fundamentar regras do sistema |
 
 ## Plataforma de referência: RER (Rural Environmental Registry)
 
@@ -172,8 +172,8 @@ Prefira fontes oficiais; alternativas comunitárias servem como apoio/automaçã
 
 ## Base legal
 
-- **Lei nº 12.651/2012** (Código Florestal) — define APP, Reserva Legal, uso restrito. Arquivo: `L12651.pdf`.
-- **Decreto nº 7.830/2012** — institui o SICAR. Arquivo: `Decreto_nº_7830.pdf`.
+- **Lei nº 12.651/2012** (Código Florestal) — define APP, Reserva Legal, uso restrito. Arquivo: `docs/base-documental/legislacao/L12651.pdf`.
+- **Decreto nº 7.830/2012** — institui o SICAR. Arquivo: `docs/base-documental/legislacao/Decreto nº 7830.pdf`.
 
 Toda regra de negócio sobre dimensões de APP, percentuais de RL e classificação de feições deve ser fundamentada nesses textos (disponíveis no projeto).
 
@@ -186,7 +186,7 @@ Toda regra de negócio sobre dimensões de APP, percentuais de RL e classificaç
 - **Módulo Offline:** mesmo endereço → "Baixe o módulo de cadastro offline" (exige código **SNCR** conforme o CPF).
 - **Envio (somente teste):** https://car-sus.dataprev.gov.br/#/enviar
 - **Central do Proprietário/Possuidor:** https://car-sus.dataprev.gov.br/#/central/acesso
-- Login via **Gov.br** com credenciais de teste (detalhes em `Acesso_ao_Mo_dulo_de_Cadastro_Pre__Preenchido.pdf`).
+- Login via **Gov.br** com credenciais de teste (detalhes em `docs/base-documental/ecossistema/Acesso ao Módulo de Cadastro Pré- Preenchido.pdf`).
 
 > 🔐 **Não commitar credenciais, CPFs ou códigos SNCR** (mesmo fictícios) em texto plano. Mantenha em `.env`/gerenciador de segredos, fora do controle de versão.
 
@@ -256,8 +256,13 @@ Incrementos que já entregam valor (skate → patinete → bike → moto → car
 ```
 /
 ├── CLAUDE.md
+├── README.md              # Visão do projeto, decisões e restrições
 ├── docs/                  # Pesquisa de usuário, decisões, briefing
-│   └── acesso-ambiente-testes.md   # NÃO versionar credenciais reais
+│   ├── briefing.md        # Decisões e enquadramento do problema
+│   ├── base-documental/   # Manuais, leis e metodologia (PDFs locais, não versionados)
+│   │   ├── README.md      #   índice da base documental
+│   │   └── manuais/  legislacao/  metodologia/  ecossistema/
+│   └── acesso-ambiente-testes.md   # (se criado) NÃO versionar credenciais reais
 ├── prototypes/            # Wireframes, mockups, storyboards
 ├── data/                  # Bases (registrar data de extração; NÃO versionar dados pesados)
 ├── src/                   # Código-fonte (se houver)
