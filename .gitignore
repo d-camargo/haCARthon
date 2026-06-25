@@ -21,6 +21,12 @@ data/**
 *.tiff
 *.zip
 
+# Exceção: dados sintéticos pequenos da PoC (fazem parte da entrega, são versionados)
+!src/poc-sobreposicao/dados/*.geojson
+!src/poc-sobreposicao/saida/sobreposicoes.geojson
+# Artefatos gerados da PoC que NÃO devem ser versionados
+src/poc-sobreposicao/saida/*.sqlite
+
 # Sistema operacional / editores
 .DS_Store
 Thumbs.db

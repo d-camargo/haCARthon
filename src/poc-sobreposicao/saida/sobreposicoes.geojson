@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "SELECT",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::4674" } },
+"features": [
+{ "type": "Feature", "properties": { "imovel": "PR-4110904-MV4", "contra": "PA Boa Vista", "tipo": "assentamento", "sobrep_ha": 85.33 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -51.92, -22.62 ], [ -51.919999989550263, -22.635000233874905 ], [ -51.925, -22.635 ], [ -51.924999989493323, -22.620000233754745 ], [ -51.92, -22.62 ] ] ] } }
+]
+}

@@ -1,0 +1,28 @@
+{
+  "type": "FeatureCollection",
+  "name": "imoveis_car",
+  "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::4674" } },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "cod_imovel": "PR-4110904-MV4", "nome": "Fazenda Milho Verde IV", "ind_status": "AT" },
+      "geometry": { "type": "Polygon", "coordinates": [[
+        [-51.940, -22.620], [-51.920, -22.620], [-51.920, -22.640], [-51.940, -22.640], [-51.940, -22.620]
+      ]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "cod_imovel": "PR-4128203-SBE", "nome": "Sítio Boa Esperança", "ind_status": "AT" },
+      "geometry": { "type": "Polygon", "coordinates": [[
+        [-51.935, -22.632], [-51.926, -22.632], [-51.926, -22.648], [-51.935, -22.648], [-51.935, -22.632]
+      ]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "cod_imovel": "PR-4119608-SF", "nome": "Fazenda Santa Fé", "ind_status": "AT" },
+      "geometry": { "type": "Polygon", "coordinates": [[
+        [-51.975, -22.620], [-51.955, -22.620], [-51.955, -22.640], [-51.975, -22.640], [-51.975, -22.620]
+      ]] }
+    }
+  ]
+}
