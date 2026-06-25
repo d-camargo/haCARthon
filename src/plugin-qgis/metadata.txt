@@ -1,0 +1,13 @@
+[general]
+name=Pré-Val CAR
+qgisMinimumVersion=3.40
+description=Pré-validação geoespacial de cadastros ambientais rurais (CAR), com detecção de sobreposição, fila priorizada e geração de rascunhos de parecer (RAT).
+version=0.1.0
+author=haCARthon Team
+email=equipe@hacarthon
+about=O plugin tem escopo de análise/validação de cadastros do SICAR, detectando sobreposições CARxCAR e CARxAssentamentos.
+tracker=
+repository=
+category=Analysis
+tags=car, sicar, validacao, analise, sobreposicao
+icon=icon.png
