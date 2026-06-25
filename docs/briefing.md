@@ -57,7 +57,36 @@ Artefatos produzidos em `docs/descobrir/` e `docs/definir/`.
 Os dados **reforçam** o recorte: o gargalo nº 1 nomeado pelo estudo (**sobreposições**) é exatamente o
 que a PoC R2 ataca, e o ganho comprovado vem de **bases de referência melhores + pré-validação** — o
 coração do painel R1. O painel pode, inclusive, exibir esses indicadores (% validado, % com sobreposição)
-como contexto. *Pendências para aprofundar no PDF: Tabela 4 "Sistemas usados pelos estados" (p.65 — embasa o "4 sistemas"/Gap C) e Fig. 8 "Etapas da Análise Dinamizada" (p.84).*
+como contexto. *Pendência para aprofundar: Fig. 8 "Etapas da Análise Dinamizada" (p.84).*
+
+## 2.2 Fragmentação de sistemas (Gap C) — dado do estudo (Tabela 4, p.63-65)
+
+> Fundamenta a dor "muitos sistemas" da Luana com dado real do estudo CPI/PUC-Rio (2025).
+> A fragmentação tem **duas camadas**.
+
+**Camada 1 — entre estados (não existe "um" sistema do CAR).** O Código Florestal deixou cada
+estado escolher entre usar o SICAR direto ou ter sistema próprio (Tabela 4):
+- **SICAR direto (16 UFs):** AL, AP, AM, CE, DF, MA, MG, PB, PR, PE, PI, RJ, RN, RS, RR, SE.
+- **Sistema estadual próprio (11 UFs):** AC, BA, ES, GO, MT, MS, PA, RO, SC, SP, TO.
+
+Vários estaduais são **versões antigas do SICAR customizadas ("forkadas")** que, segundo o estudo,
+viram *"plataformas independentes, sem governança federal e sem alinhamento automático"* → **perda
+de sincronia**, *"lacunas ou atrasos na atualização"*. A integração SICAR↔SNCR/SIGEF **só começou em
+2025** (puxada pela ADPF 743) — antes, eram silos.
+
+**Camada 2 — dentro da análise (o dia a dia da Luana).** Para validar **um** cadastro ela cruza
+fontes em sistemas separados: o sistema de análise (SICAR/estadual) + bases fundiárias (SNCR, SIGEF)
++ INCRA (assentamentos, quilombolas) + bases cartográficas/satélite + painéis de BI (Power BI).
+O estudo confirma: a maioria dos estados *"não possui mecanismos de transparência… dados de difícil acesso"*.
+
+**Evidência de 1ª mão (nosso pipeline):** para sobrepor só **duas** camadas (SICAR + INCRA) lidamos com
+**duas tecnologias** (GeoServer WFS × i3geo/MapServer), **dois CRS/ordens de eixo** (4674 lon/lat × 4326
+lat/lon invertido), **dois esquemas de campos** e **dois regimes de acesso** (aberto × login). É o Gap C
+em miniatura — multiplicado pelas 5-6 fontes da Luana, a cada cadastro, vezes a fila.
+
+> **Implicação:** o valor do nosso recorte é **fazer a integração entre sistemas uma vez** (pipeline) e
+> entregar o resultado consolidado num só lugar — alinhado ao movimento real do **CAR Pré-Preenchido**
+> (que já puxa SNCR/SIGEF na *entrada*; nós propomos o mesmo na *análise*).
 
 ## 3. Personas (resumo)
 
