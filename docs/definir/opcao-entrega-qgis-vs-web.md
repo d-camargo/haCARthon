@@ -34,6 +34,8 @@ cartográficas de referência insuficientes**.
 
 ## 2. Validação da suposição "Luana usa QGIS" → CONFIRMADA
 
+> Links e datas de acesso consolidados em `docs/referencias.md`.
+
 | Evidência | Implicação |
 |---|---|
 | **Plugin [GeoCAR](https://plugins.qgis.org/plugins/geocar/)** no repositório oficial do QGIS (preparar/analisar/exportar CAR) | O padrão "plugin de CAR no QGIS" **já existe** — extensão, não invenção |
