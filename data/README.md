@@ -7,6 +7,7 @@ este README é o registro do que existe, de onde veio e **quando foi extraído**
 
 | Base | Fonte | UF/recorte | Categoria(s) | Data de extração | Observações |
 |---|---|---|---|---|---|
+| `sicar/imoveis_pr_itaguaje.geojson` | SICAR WFS oficial (`geoserver.car.gov.br`) | PR / Itaguajé | imóveis (perímetro) | 2026-06-25 | 364 imóveis; baixado por `src/pipeline-ingestao/baixar.sh`; não versionado |
 | _(exemplo)_ | Consulta Pública SICAR | — | perímetro/APP/RL | AAAA-MM-DD | — |
 
 ## Fontes oficiais preferenciais

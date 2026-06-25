@@ -57,5 +57,6 @@ como a prova de conceito técnica enxuta da entrega híbrida. _(Confirmado pela 
 - [ ] Validar a recomendação de recorte com a equipe (ou rodar AskUserQuestion).
 - [ ] Rascunhar a **jornada futura** da Luana com o painel (storyboard).
 - [ ] Esboçar o **wireframe** do painel (fila priorizada + comparação declarado×referência + alerta de sobreposição).
-- [x] Validar viabilidade da **PoC de sobreposição** — feita em `src/poc-sobreposicao/` (PostGIS + `ST_Intersects`/`ST_Intersection`; verificada localmente via GDAL/Spatialite). Detecta CAR×assentamento e CAR×CAR, quantifica em ha e exporta GeoJSON para o mapa. Próximo: trocar dados sintéticos por recorte real do SICAR (registrar data de extração).
+- [x] Validar viabilidade da **PoC de sobreposição** — feita em `src/poc-sobreposicao/` (PostGIS + `ST_Intersects`/`ST_Intersection`; verificada localmente via GDAL/Spatialite). Detecta CAR×assentamento e CAR×CAR, quantifica em ha e exporta GeoJSON para o mapa.
+- [x] **Pipeline de ingestão de dados reais** — `src/pipeline-ingestao/` baixa recorte municipal do **SICAR WFS oficial** e roda a detecção. Validado em **Itaguajé/PR (364 imóveis → 491 pares conflitantes reais)**. Dados em `data/` (não versionados; data de extração registrada).
 - [ ] Confirmar no RER o que já existe (map_component/Leaflet, calc_engine) para **estender** em vez de recriar.
