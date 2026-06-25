@@ -1,6 +1,7 @@
 [general]
 name=Pré-Val CAR
 qgisMinimumVersion=3.40
+qgisMaximumVersion=4.99
 description=Pré-validação geoespacial de cadastros ambientais rurais (CAR), com detecção de sobreposição, fila priorizada e geração de rascunhos de parecer (RAT).
 version=0.1.0
 author=haCARthon Team
@@ -10,4 +11,4 @@ tracker=
 repository=
 category=Analysis
 tags=car, sicar, validacao, analise, sobreposicao
-icon=icon.png
+icon=icon.svg

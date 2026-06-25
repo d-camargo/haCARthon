@@ -26,5 +26,5 @@ class PreValCarProvider(QgsProcessingProvider):
 
     def icon(self):
         import os
-        icon_path = os.path.join(os.path.dirname(__file__), 'icon.png')
+        icon_path = os.path.join(os.path.dirname(__file__), 'icon.svg')
         return QIcon(icon_path)
