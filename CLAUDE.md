@@ -80,12 +80,17 @@ CAR (Cadastro Ambiental Rural) · SICAR (Sistema Nacional de CAR) · APP (Área 
 
 ## Base documental do projeto
 
-> 📁 **Estes documentos estão na pasta `docs/base-documental/`, organizados por tema** (`manuais/`, `legislacao/`, `metodologia/`, `ecossistema/`) e acessíveis ao Claude Code. Consulte-os antes de pesquisar fora — são a fonte autoritativa do domínio. Índice completo em `docs/base-documental/README.md`. Os PDFs ficam locais (não versionados); os `.md` de referência são versionados.
+> 📁 **Estes documentos estão na pasta `docs/base-documental/`, organizados por tema** (`manuais/`, `legislacao/`, `metodologia/`, `estudos/`, `ecossistema/`) e acessíveis ao Claude Code. Consulte-os antes de pesquisar fora — são a fonte autoritativa do domínio. Índice completo em `docs/base-documental/README.md`. Os PDFs ficam locais (não versionados); os `.md` de referência são versionados.
 
 | Documento | O que contém | Quando usar |
 |---|---|---|
+| `docs/base-documental/metodologia/Edital haCARthon - Assinado - SEI_0993344_Edital_158.pdf` | Edital oficial ENAP nº 158/2026 — regras da maratona | Conferir regras, prazos e critérios de avaliação |
 | `docs/base-documental/metodologia/esperado.md` | Enunciado oficial dos 3 desafios e soluções esperadas | Definir escopo e validar aderência ao Desafio 2 |
 | `docs/base-documental/metodologia/Resumo_haCARthon_Ideacao_Prototipacao.md` | Metodologia (Duplo Diamante), personas, formato de entrega | Conduzir ideação e prototipação |
+| `docs/base-documental/metodologia/pitch.md` | Resumo da Live 04 — como construir o pitch (estrutura, slides, gravação) | Montar o pitch e o vídeo |
+| `docs/base-documental/metodologia/Hacarthon - Live de Pitch (2).pdf` | Slides da Live de Pitch | Apoiar a construção do pitch |
+| `docs/base-documental/estudos/Onde-Estamos-2025.pdf` | CPI/PUC-Rio — Radiografia do CAR e do PRA nos Estados (Ed. 2025); dados de inscrição/análise por estado (nov/2025) | Dimensionar o problema e fundamentar o pitch (ver `docs/briefing.md` §2.1) |
+| `docs/base-documental/estudos/LEG-Consultada-OE-2025.pdf` | Apêndice "Legislação Consultada" do estudo acima | Rastrear a legislação estadual consultada |
 | `docs/base-documental/manuais/manual_modulo_cadastro.pdf` | Manual do Módulo de Cadastro v3.7 (etapa Geo, 5 passos, baixar imagens de satélite, vetorização) | Entender o fluxo geoespacial atual e seus atritos |
 | `docs/base-documental/manuais/manual_modulo_cadastro_pre_preenchido.pdf` | Manual do Módulo Pré-Preenchido (consulta automática SNCR/SIGEF, retificação) | Entender pré-preenchimento e integração com bases fundiárias |
 | `docs/base-documental/manuais/Manual_Retificacao_Dinamizada.pdf` | Manual da Retificação Dinamizada do SICAR (2023) — comparação declarado×referência | Entender o mecanismo de validação e divergências |
@@ -261,7 +266,7 @@ Incrementos que já entregam valor (skate → patinete → bike → moto → car
 │   ├── briefing.md        # Decisões e enquadramento do problema
 │   ├── base-documental/   # Manuais, leis e metodologia (PDFs locais, não versionados)
 │   │   ├── README.md      #   índice da base documental
-│   │   └── manuais/  legislacao/  metodologia/  ecossistema/
+│   │   └── manuais/  legislacao/  metodologia/  estudos/  ecossistema/
 │   └── acesso-ambiente-testes.md   # (se criado) NÃO versionar credenciais reais
 ├── prototypes/            # Wireframes, mockups, storyboards
 ├── data/                  # Bases (registrar data de extração; NÃO versionar dados pesados)

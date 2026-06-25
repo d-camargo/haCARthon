@@ -41,3 +41,17 @@
 > **Leitura para a fase Definir:** as certezas C3 e C4 conectam o problema da Luana diretamente
 > às soluções esperadas do Desafio 2 — *geração/atualização de bases de referência* e *detecção
 > de sobreposições*. As suposições S2/S3 são a **hipótese central** a validar antes de fixar o recorte.
+
+## Atualização — validação com o estudo CPI/PUC-Rio (2026-06-25)
+
+Cruzando com `docs/base-documental/estudos/Onde-Estamos-2025.pdf` (dados nov/2025). Detalhes e
+páginas no `briefing.md` (seção 2.1).
+
+- **S1 / S5 (sobreposição) → CONFIRMADAS.** Sobreposições acima do limite legal impedem a análise
+  (automática ou por equipe); em Mato Grosso ~30% dos cadastros têm sobreposições relevantes.
+- **S2 / S3 (base de referência) → CONFIRMADAS.** Ausência de base fundiária verificável é entrave
+  central; bases cartográficas de alta resolução destravam a validação (SP, MT).
+- **D2 → parcial:** cobertura desigual; só ~9 estados com análise automatizada relevante.
+- **D3 → parcial:** atualização gera "saltos semanais"; há reanálise com bases mais recentes (MS).
+- **D4 → respondida:** gargalos = (1) sobreposições/situação fundiária e (2) comunicação com o proprietário.
+- **Ainda abertas:** D1 (quais 4 sistemas — ver Tabela 4 do estudo, p.65), D5, D6.

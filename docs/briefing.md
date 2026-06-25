@@ -32,6 +32,33 @@ Artefatos produzidos em `docs/descobrir/` e `docs/definir/`.
 - **Sobreposição** (com assentamentos) e **Área de Uso Restrito** desviam da automação.
 - A Retificação/Análise Dinamizada é habilitada **município a município** → cobertura desigual.
 
+## 2.1 Dados do estudo CPI/PUC-Rio — "Onde Estamos na Implementação do Código Florestal? Ed. 2025"
+
+> Fonte: `docs/base-documental/estudos/Onde-Estamos-2025.pdf` (CPI/PUC-Rio, 2025; dados dos órgãos
+> estaduais e Painel SFB de nov/2025). **Data de extração: 2026-06-25.** Esses números **dimensionam
+> e validam** o problema da Luana com dados nacionais recentes.
+
+### A escala da fila é nacional e enorme
+- **~8 milhões** de imóveis inscritos no CAR (+5,6% no ano). Maiores bases: Bahia (1.245 mil) e Minas Gerais (1.140 mil). *(Sumário Exec. p.17–18, Fig. 2)*
+- **Análise iniciada:** subiu de 15% → **24% da base** em um ano (~1,9 milhão). Ou seja, **~76% dos cadastros ainda nem tiveram análise iniciada.** *(p.20–23, Fig. 3)*
+- **Análise concluída (validada):** ~**724 mil = 9% da base** (era 3,3% no ano anterior — quase triplicou). **Nove UFs não chegam a 1% validado.** *(p.25–27, Fig. 4)*
+- Heterogeneidade enorme: % validado vai de **ES 65% / SP 45% / PR 40%** até resíduos <1% na maioria das UFs.
+
+### O estudo confirma nossas suposições (ver Matriz CSD)
+- **S1/S5 — sobreposições travam a análise (CONFIRMADA):** *"cadastros com sobreposições acima do limite legal de tolerância não podem avançar na análise — seja por automação ou por equipe técnica — sem retificação pelos produtores"*. Em **Mato Grosso, ~30% dos cadastros têm sobreposições relevantes**. *(p.14, p.21)*
+- **S2/S3 — base de referência é entrave/causa-raiz (CONFIRMADA):** *"a ausência de informações fundiárias verificáveis no CAR começa a se consolidar como um dos principais entraves à continuidade das análises"*. Onde há **bases cartográficas de alta resolução**, a validação destrava (SP dobrou validação para 45%; MT "CAR Digital" **delimita automaticamente APP, RL, vegetação remanescente e área consolidada**). *(p.14, Box 1 p.24)*
+
+### Respostas a dúvidas em aberto
+- **D4 (gargalo dominante):** o estudo nomeia **dois gargalos estruturais** — (1) **situação fundiária / sobreposições** e (2) **comunicação com o proprietário** ("aguardando atendimento à notificação"). *(p.14, p.28)*
+- **D3 (atualização):** a análise dinamizada gera "saltos semanais"; MS faz **reanálise com bases cartográficas mais recentes** → reforça a importância de **atualizar a base de referência**. *(p.20–21)*
+- **D2 (cobertura):** confirma cobertura **desigual** e habilitação por estado/município; só ~9 estados adotam análise automatizada de forma relevante. *(Fig. 1 p.16, Fig. 3)*
+
+### Implicação para o recorte (R1+R2)
+Os dados **reforçam** o recorte: o gargalo nº 1 nomeado pelo estudo (**sobreposições**) é exatamente o
+que a PoC R2 ataca, e o ganho comprovado vem de **bases de referência melhores + pré-validação** — o
+coração do painel R1. O painel pode, inclusive, exibir esses indicadores (% validado, % com sobreposição)
+como contexto. *Pendências para aprofundar no PDF: Tabela 4 "Sistemas usados pelos estados" (p.65 — embasa o "4 sistemas"/Gap C) e Fig. 8 "Etapas da Análise Dinamizada" (p.84).*
+
 ## 3. Personas (resumo)
 
 - **Luana** — analista ambiental (geógrafa). Dores: fila de ~12.000 análises; sobreposições
