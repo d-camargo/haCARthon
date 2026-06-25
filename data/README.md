@@ -18,6 +18,9 @@ este README é o registro do que existe, de onde veio e **quando foi extraído**
 - **WMS/WFS oficial:** `https://geoserver.car.gov.br/geoserver/sicar/wfs` (disponibilidade
   variável — validar antes de depender).
 - **Bases fundiárias de referência:** SNCR, SIGEF; **SNIF** para bases florestais.
+- **Assentamentos (INCRA):** "Assentamento Brasil" — Acervo Fundiário do INCRA. ⚠️ Em 2026-06-25
+  o acervo exigia **login** e os geoservers/i3geo estavam fora do ar; usar download manual ou um
+  WFS estável quando disponível (ver `src/pipeline-ingestao/baixar_assentamentos.sh`).
 - **Automação de download (comunidade):** `urbanogilson/SICAR` (OCR de captcha).
 - **MapBiomas:** alternativa de uso/cobertura do solo (menos atualizada que a oficial).
 
