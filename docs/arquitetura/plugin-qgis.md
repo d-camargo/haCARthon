@@ -10,15 +10,14 @@
 Dar à analista ambiental estadual (persona **Luana**) a pré-validação geoespacial **dentro da
 ferramenta que ela já usa** (QGIS) — atacando a raiz do Gap C ("não criar mais um sistema").
 
-**Complementar ao [GeoCAR](https://github.com/OpenGeoOne/GeoCAR), não concorrente:**
+O plugin tem **escopo próprio — análise/validação**: detecção de sobreposição (CAR×CAR, CAR×assentamento),
+fila priorizada por risco e geração de parecer/RAT. Reaproveita o **pipeline já validado**
+(`src/pipeline-ingestao/`): WFS do SICAR + INCRA i3geo + lógica de detecção (ver `docs/referencias.md`).
 
-| | GeoCAR (existe) | Pré-Val CAR (este) |
-|---|---|---|
-| Lado | Entrada/preparação do cadastro (cadastrante) | **Análise/validação** (analista) |
-| Faz | baixar CAR, APP por altitude/declividade, exportar SHP/ZIP/KML | **detecção de sobreposição** (CAR×CAR, CAR×assentamento), **fila priorizada**, **parecer/RAT** |
-
-Reaproveita o **pipeline já validado** (`src/pipeline-ingestao/`): WFS do SICAR + INCRA i3geo + lógica de
-detecção (ver `docs/referencias.md` para endpoints).
+> Nota de ecossistema (**não é restrição de projeto**): uma varredura rápida indicou que plugins de CAR
+> já existentes no QGIS cobrem a **preparação/exportação** do cadastro, não a **análise** — ou seja, este
+> espaço está livre. **As decisões técnicas abaixo são tomadas pelas nossas próprias necessidades**, sem
+> atrelar versão/dependências a terceiros.
 
 ## 2. O que a ferramenta precisa cobrir (do trabalho real da Luana)
 
@@ -30,7 +29,7 @@ Logo, o MVP vai **da detecção até o rascunho de parecer/notificação (RAT)**
 
 | # | Decisão | Implicação |
 |---|---|---|
-| D1 | **Plugin novo e complementar** ao GeoCAR | mesmo padrão (Processing), sem acoplar ao código deles |
+| D1 | **Plugin novo e independente, escopo próprio (análise/validação)** | decisões guiadas pelas nossas necessidades, não por compatibilidade com terceiros |
 | D2 | **Native-first**: Processing provider **+ UX nativa do QGIS** (tabela de atributos, formulário de feição, estilo por regra, Layout+Atlas, Actions). **Única GUI custom = um painel de KPIs (dockwidget)** — KPI agregado não tem equivalente nativo | mínimo de código de GUI; menor manutenção; UX que a analista já conhece |
 | D3 | **QGIS puro** (QgsGeometry), **PostGIS opcional** | roda offline na máquina dela; PostGIS só p/ escala (UF) |
 | D4 | **MVP = detecção + fila + parecer/RAT** | entrega fim-a-fim, fiel ao fluxo da analista |
@@ -187,10 +186,13 @@ src/plugin-qgis/
 | (novo) | `core/priorizacao.py`, `core/parecer.py` + recursos nativos (`.qpt`/`.qml`/Actions) + `gui/kpis_dock.py` (KPIs) |
 
 ## 9. Compatibilidade, dependências e distribuição
-- **QGIS ≥ 3.40** (alinha ao mínimo do GeoCAR para coexistir), PyQGIS + PyQt.
+- **QGIS — mirar uma versão LTR** (estabilidade em órgãos públicos). O mínimo é definido pelas **nossas**
+  APIs (Processing, `QgsSpatialIndex`, `QgsDistanceArea`, Atlas, dockwidget), todas disponíveis há muitas
+  versões → dá para escolher uma LTR conservadora e maximizar alcance. Versão exata **a confirmar contra
+  a instalação do órgão-alvo** (item aberto). PyQGIS + PyQt.
 - **Sem dependências pip externas** no caminho padrão (usa GDAL/QGIS embutidos); PostGIS é opcional.
 - Distribuição pelo **repositório oficial de plugins do QGIS** (DPG/GPL-3.0), versionado.
-- i18n PT-BR (e EN no `about`, como o GeoCAR).
+- i18n PT-BR (com `about`/tags também em EN, convenção do repositório oficial de plugins do QGIS).
 
 ## 10. Restrições e segurança (alinhado ao CLAUDE.md)
 - **Somente leitura/análise** — nunca escreve em produção do SICAR.
@@ -210,4 +212,4 @@ src/plugin-qgis/
 - Nome definitivo + ícone (item #3 do CLAUDE.md).
 - Pesos do score de priorização (validar com analista — "O Pedido" §1).
 - Formato final do parecer (HTML/PDF; campos obrigatórios do RAT do órgão).
-- Reaproveitar a função `baixarCAR` do GeoCAR como referência de implementação do WFS?
+- **Versão mínima do QGIS** (LTR) a confirmar com o órgão-alvo.
