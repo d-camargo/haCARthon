@@ -5,12 +5,22 @@ Wireframes e mockups da solução. Fidelidade sobe **só até onde precisar**
 
 ## painel-luana/ — Painel de Pré-validação da Luana (recorte R1+R2)
 
-Wireframe **lo-fi** da tela principal do recorte escolhido: a fila de análise priorizada por
-risco + o detalhe do cadastro com comparação declarado × referência e detecção de sobreposição.
+Duas fidelidades da mesma tela:
 
-- **Arquivo:** `painel-luana/index.html` (autocontido, sem dependências).
-- **Como abrir:** dê duplo clique no arquivo ou abra no navegador.
-- **Print:** `painel-luana/preview.png` (gerado com Chrome headless).
+| Arquivo | Fidelidade | Dados |
+|---|---|---|
+| `painel-luana/index.html` | **Wireframe lo-fi** (SVGs estáticos, sem dependências) | fictícios |
+| `painel-luana/painel.html` | **Protótipo funcional** com **mapa Leaflet** | **REAIS** (SICAR + INCRA) |
+
+- **Abrir:** duplo clique no `.html` (o `painel.html` usa Leaflet via CDN + tiles OSM → precisa de internet).
+- **Prints:** `preview.png` (wireframe) e `preview_painel.png` (funcional).
+- **Dados do mapa:** `dados/dados_mapa.js` (Querência do Norte/PR — 548 imóveis, 69 em conflito com
+  10 assentamentos do INCRA). Regenerável com `./gerar_dados_mapa.sh` após rodar o pipeline.
+
+### O que o painel funcional mostra
+Fila priorizada pelas sobreposições reais detectadas pelo pipeline, KPIs (imóveis, em conflito,
+assentamentos, ha em conflito) e o mapa com imóveis CAR, **conflitos em vermelho** e **assentamentos
+do INCRA**. Clicar na fila ou no mapa inspeciona o imóvel e mostra qual assentamento ele sobrepõe.
 
 ### O que o wireframe demonstra (e como liga aos gaps)
 | Elemento da tela | Gap atacado | Origem |
@@ -34,6 +44,7 @@ google-chrome-stable --headless --disable-gpu --no-sandbox \
 ```
 
 ### Próximos passos de prototipação
-- [ ] Validar o wireframe com a jornada futura (storyboard) da Luana.
-- [ ] Subir fidelidade para **mockup** (cores, tipografia) — ou migrar para **Figma** se for o canal do pitch.
-- [ ] Conectar a **PoC de sobreposição** (PostGIS) a este painel — substituir os SVGs por mapa **Leaflet** real (reusar `map_component` do RER).
+- [x] Conectar a detecção de sobreposição a um **mapa Leaflet** real → `painel.html` (dados reais SICAR + INCRA).
+- [ ] Validar o painel funcional com a jornada futura (storyboard) da Luana.
+- [ ] Subir fidelidade visual / migrar para **Figma** se for o canal do pitch.
+- [ ] Reusar o `map_component` do RER no lugar do Leaflet puro, ao integrar com a plataforma.

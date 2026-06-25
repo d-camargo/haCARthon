@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Pré-validação da Luana — mapa real (haCARthon · Desafio 2)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="dados/dados_mapa.js"></script>
+<style>
+  :root{
+    --ink:#1f2329; --muted:#6b7280; --line:#c9ced6; --bg:#f4f5f7; --panel:#fff;
+    --risk-hi:#b42318; --accent:#1d6b4c; --tag:#eef1f5; --alert-bg:#fff4f2; --alert-line:#f0c4bd; --assent:#b54708;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg);font-size:14px}
+  .note{background:#eef6f1;border-bottom:1px solid #cfe3d6;color:#1d6b4c;padding:6px 16px;font-size:12px;text-align:center}
+  header.app{display:flex;align-items:center;justify-content:space-between;background:var(--panel);border-bottom:2px solid var(--line);padding:10px 16px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700}
+  .logo{width:26px;height:26px;border:2px solid var(--ink);border-radius:6px;display:grid;place-items:center;font-size:13px}
+  .brand small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+  .who{font-size:12px;color:var(--muted);text-align:right}.who b{color:var(--ink)}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px 16px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+  .kpi .n{font-size:22px;font-weight:700}.kpi .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .kpi.alert .n{color:var(--risk-hi)}
+  .grid{display:grid;grid-template-columns:330px 1fr;gap:12px;padding:0 16px 20px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .panel h2{font-size:12px;margin:0;padding:10px 12px;border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  .queue{max-height:600px;overflow:auto}
+  .card{border-bottom:1px solid var(--line);padding:9px 12px;cursor:pointer}
+  .card:hover{background:#f7f9fb}
+  .card.sel{background:#fdeeec;border-left:3px solid var(--risk-hi);padding-left:9px}
+  .card .row1{display:flex;justify-content:space-between;align-items:center;gap:6px}
+  .card .cod{font-weight:700;font-size:11px;font-family:ui-monospace,monospace}
+  .risk{font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px;color:#fff;background:var(--risk-hi);white-space:nowrap}
+  .card .meta{font-size:11px;color:var(--muted);margin-top:3px}
+  #map{height:560px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;padding:8px 12px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);align-items:center}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px;border:1px solid #999}
+  .detail{padding:10px 12px;border-top:1px solid var(--line);font-size:12px;min-height:54px}
+  .detail .t{font-weight:700}.detail .muted{color:var(--muted)}
+  .badge{display:inline-block;background:var(--alert-bg);border:1px solid var(--alert-line);color:var(--risk-hi);border-radius:5px;padding:2px 7px;font-size:11px;font-weight:700;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="note">PROTÓTIPO FUNCIONAL · dados REAIS abertos — SICAR (imóveis) + INCRA (assentamentos) · Querência do Norte/PR · extração 2026-06-25</div>
+
+<header class="app">
+  <div class="brand"><div class="logo">CAR</div><div>Painel de Pré-validação <small>Detecção de sobreposição — fila por risco</small></div></div>
+  <div class="who">Órgão Ambiental Estadual<br><b>Luana M.</b> · analista ambiental</div>
+</header>
+
+<section class="kpis" id="kpis"></section>
+
+<div class="grid">
+  <section class="panel">
+    <h2>Fila priorizada por sobreposição</h2>
+    <div class="queue" id="fila"></div>
+  </section>
+  <section class="panel">
+    <div id="map"></div>
+    <div class="legend">
+      <span><i style="background:#9aa7b4"></i>Imóvel CAR</span>
+      <span><i style="background:#e8554a;border-color:#b42318"></i>Imóvel com sobreposição</span>
+      <span><i style="background:#f0b24a;border-color:#b54708"></i>Assentamento (INCRA)</span>
+      <span style="margin-left:auto">Clique num imóvel da fila ou no mapa para inspecionar.</span>
+    </div>
+    <div class="detail" id="detail"><span class="muted">Nenhum imóvel selecionado.</span></div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const D = window.DADOS;
+  const imoveis = D.imoveis.features;
+  const conflitos = imoveis.filter(f => f.properties.conflito === 1)
+                           .sort((a,b)=> b.properties.sobrep_ha - a.properties.sobrep_ha);
+
+  // KPIs
+  const totalHa = conflitos.reduce((s,f)=> s + (f.properties.sobrep_ha||0), 0);
+  const kpis = [
+    ['Imóveis no município', imoveis.length, ''],
+    ['Com sobreposição', conflitos.length, 'alert'],
+    ['Assentamentos (INCRA)', D.assentamentos.features.length, ''],
+    ['Área em conflito (ha)', Math.round(totalHa).toLocaleString('pt-BR'), 'alert'],
+  ];
+  document.getElementById('kpis').innerHTML = kpis.map(k=>
+    `<div class="kpi ${k[2]}"><div class="n">${k[1]}</div><div class="l">${k[0]}</div></div>`).join('');
+
+  // Mapa
+  const map = L.map('map', {zoomControl:true});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+
+  const styleImovel = f => f.properties.conflito===1
+    ? {color:'#b42318', weight:1, fillColor:'#e8554a', fillOpacity:.45}
+    : {color:'#6b7785', weight:.6, fillColor:'#9aa7b4', fillOpacity:.15};
+
+  let selecionado = null;
+  const camadaImoveis = L.geoJSON(D.imoveis, {
+    style: styleImovel,
+    onEachFeature: (feat, layer)=> layer.on('click', ()=> selecionar(feat, layer))
+  }).addTo(map);
+
+  L.geoJSON(D.assentamentos, {
+    style:{color:'#b54708', weight:2, dashArray:'5 3', fillColor:'#f0b24a', fillOpacity:.25}
+  }).bindPopup(l=>{
+    const p=l.feature.properties;
+    return `<b>${p.nome||p.nome_projeto}</b><br>Assentamento INCRA${p.num_familias?` · ${p.num_familias} famílias`:''}`;
+  }).addTo(map);
+
+  map.fitBounds(camadaImoveis.getBounds(), {padding:[20,20]});
+
+  // index cod_imovel -> layer
+  const layerByCod = {};
+  camadaImoveis.eachLayer(l => { layerByCod[l.feature.properties.cod_imovel] = l; });
+
+  function selecionar(feat, layer){
+    const p = feat.properties;
+    if (selecionado) camadaImoveis.resetStyle(selecionado);
+    layer.setStyle({color:'#7a1208', weight:3, fillColor:'#ff7a6b', fillOpacity:.7});
+    layer.bringToFront(); selecionado = layer;
+    map.fitBounds(layer.getBounds(), {padding:[40,40], maxZoom:15});
+    document.getElementById('detail').innerHTML = p.conflito===1
+      ? `<div class="t">${p.cod_imovel}</div>
+         <div class="muted">${p.municipio} · sobrepõe <b>${p.assentamento||'assentamento'}</b></div>
+         <div class="badge">⚠ ${(''+p.sobrep_ha).replace('.',',')} ha sobrepostos</div>`
+      : `<div class="t">${p.cod_imovel}</div><div class="muted">${p.municipio} · sem sobreposição detectada</div>`;
+    // sincroniza seleção na fila
+    document.querySelectorAll('.card').forEach(c=> c.classList.toggle('sel', c.dataset.cod===p.cod_imovel));
+  }
+
+  // Fila (só conflitos, ordenada por área sobreposta)
+  document.getElementById('fila').innerHTML = conflitos.map(f=>{
+    const p=f.properties;
+    return `<div class="card" data-cod="${p.cod_imovel}">
+      <div class="row1"><span class="cod">${p.cod_imovel.slice(0,22)}…</span><span class="risk">${(''+p.sobrep_ha).replace('.',',')} ha</span></div>
+      <div class="meta">${p.municipio} · sobrepõe ${p.assentamento||'assentamento'}</div></div>`;
+  }).join('');
+  document.querySelectorAll('.card').forEach(c=> c.addEventListener('click', ()=>{
+    const l = layerByCod[c.dataset.cod]; if(l) selecionar(l.feature, l);
+  }));
+})();
+</script>
+</body>
+</html>
