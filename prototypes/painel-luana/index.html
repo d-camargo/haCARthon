@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wireframe — Painel de Pré-validação da Luana (haCARthon · Desafio 2)</title>
+<!--
+  Wireframe LO-FI do recorte R1+R2 (painel de pré-validação + detecção de sobreposição).
+  Autocontido (sem dependências). Abrir no navegador. Dados são FICTÍCIOS (ambiente de demo).
+  Estética de wireframe: monocromático + 1 acento para risco/alertas. Não é design final.
+-->
+<style>
+  :root{
+    --ink:#1f2329; --muted:#6b7280; --line:#c9ced6; --bg:#f4f5f7; --panel:#ffffff;
+    --risk-hi:#b42318; --risk-md:#b54708; --risk-lo:#475467; --accent:#1d6b4c;
+    --tag:#eef1f5; --alert-bg:#fff4f2; --alert-line:#f0c4bd;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg);font-size:14px;line-height:1.45}
+  .lofi-note{background:#fffbe6;border-bottom:1px dashed #d9c66b;color:#6b5b00;padding:6px 16px;font-size:12px;text-align:center}
+  /* top bar */
+  header.app{display:flex;align-items:center;justify-content:space-between;background:var(--panel);border-bottom:2px solid var(--line);padding:10px 16px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700}
+  .logo{width:26px;height:26px;border:2px solid var(--ink);border-radius:6px;display:grid;place-items:center;font-size:13px}
+  .brand small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+  .who{font-size:12px;color:var(--muted);text-align:right}
+  .who b{color:var(--ink)}
+  /* KPI strip */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px 16px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+  .kpi .n{font-size:22px;font-weight:700}
+  .kpi .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .kpi.alert .n{color:var(--risk-hi)}
+  /* layout */
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:12px;padding:0 16px 24px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px}
+  .panel h2{font-size:13px;margin:0;padding:10px 12px;border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  /* fila / filters */
+  .filters{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-bottom:1px dashed var(--line)}
+  .chip{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:3px 9px;background:var(--tag);color:var(--muted);cursor:default}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .queue{max-height:560px;overflow:auto}
+  .card{border-bottom:1px solid var(--line);padding:10px 12px;cursor:pointer}
+  .card.sel{background:#eef6f1;border-left:3px solid var(--accent);padding-left:9px}
+  .card .row1{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .card .cod{font-weight:700;font-size:12px}
+  .card .muni{font-size:11px;color:var(--muted)}
+  .risk{font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px;color:#fff;white-space:nowrap}
+  .risk.hi{background:var(--risk-hi)} .risk.md{background:var(--risk-md)} .risk.lo{background:var(--risk-lo)}
+  .tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+  .tag{font-size:10px;border:1px solid var(--line);border-radius:4px;padding:1px 6px;color:var(--ink);background:var(--tag)}
+  .tag.warn{background:var(--alert-bg);border-color:var(--alert-line);color:var(--risk-hi)}
+  .score{font-size:10px;color:var(--muted);margin-top:6px}
+  /* detail */
+  .detail{display:flex;flex-direction:column;gap:12px}
+  .dhead{padding:12px}
+  .dhead .t{font-size:18px;font-weight:700}
+  .dhead .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .basebadge{display:inline-block;margin-top:8px;font-size:11px;border:1px solid var(--line);border-radius:6px;padding:4px 8px;background:var(--tag)}
+  .basebadge b{color:var(--accent)}
+  .maps{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 12px}
+  .map{border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#eef1f4}
+  .map .cap{font-size:11px;font-weight:700;padding:6px 8px;background:#e4e8ee;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+  .map .cap span{font-weight:400;color:var(--muted)}
+  svg{display:block;width:100%;height:150px;background:#dfe4ea}
+  .alert{margin:12px;border:1px solid var(--alert-line);background:var(--alert-bg);border-radius:8px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start}
+  .alert .ic{font-size:18px;line-height:1}
+  .alert b{color:var(--risk-hi)}
+  /* divergences table */
+  .tbl{width:100%;border-collapse:collapse;font-size:12px}
+  .tbl th,.tbl td{padding:7px 12px;border-bottom:1px solid var(--line);text-align:right}
+  .tbl th:first-child,.tbl td:first-child{text-align:left}
+  .tbl th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:#f8f9fb}
+  .tbl tr.group td{background:#f1f3f6;font-weight:700;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase}
+  .div-hi{color:var(--risk-hi);font-weight:700}
+  .div-ok{color:var(--accent)}
+  .memo{margin:0 12px 12px;font-size:11px;color:var(--muted);border-left:3px solid var(--line);padding:4px 10px}
+  /* actions */
+  .actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px;border-top:1px dashed var(--line)}
+  .btn{font-size:12px;border:1px solid var(--ink);border-radius:6px;padding:8px 12px;background:#fff;cursor:default}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+  .btn.warn{border-color:var(--risk-md);color:var(--risk-md)}
+  .legend{font-size:11px;color:var(--muted);padding:0 16px 20px}
+</style>
+</head>
+<body>
+
+<div class="lofi-note">WIREFRAME LO-FI · haCARthon Desafio 2 · recorte R1+R2 · dados fictícios (demo) · não é design final</div>
+
+<header class="app">
+  <div class="brand">
+    <div class="logo">CAR</div>
+    <div>Painel de Pré-validação <small>Análise Dinamizada — fila do estado</small></div>
+  </div>
+  <div class="who">Órgão Ambiental Estadual<br><b>Luana M.</b> · analista ambiental</div>
+</header>
+
+<!-- KPIs: traduzem as dores em números (fila, sobreposição, sem base) -->
+<section class="kpis">
+  <div class="kpi"><div class="n">12.000</div><div class="l">Fila total</div></div>
+  <div class="kpi"><div class="n">218</div><div class="l">Priorizados hoje</div></div>
+  <div class="kpi alert"><div class="n">1.473</div><div class="l">Com sobreposição</div></div>
+  <div class="kpi alert"><div class="n">3.902</div><div class="l">Sem base de referência</div></div>
+</section>
+
+<div class="grid">
+
+  <!-- ESQUERDA: fila priorizada por risco (Gap C / triagem) -->
+  <section class="panel">
+    <h2>Fila priorizada por risco</h2>
+    <div class="filters">
+      <span class="chip on">Ordenar: risco ↓</span>
+      <span class="chip">Sobreposição</span>
+      <span class="chip">Sem base ref.</span>
+      <span class="chip">AUR</span>
+      <span class="chip">Município ▾</span>
+    </div>
+    <div class="queue">
+      <div class="card sel">
+        <div class="row1"><span class="cod">PR-4110904-…F9EB02</span><span class="risk hi">RISCO ALTO</span></div>
+        <div class="muni">Itaguajé / PR · entrou 12/06</div>
+        <div class="tags"><span class="tag warn">Sobreposição c/ assentamento</span><span class="tag warn">APP curso d'água</span></div>
+        <div class="score">Score de risco 0,91 · divergência total 40,3 ha</div>
+      </div>
+      <div class="card">
+        <div class="row1"><span class="cod">PR-4128203-…A71C09</span><span class="risk hi">RISCO ALTO</span></div>
+        <div class="muni">Inajá / PR · entrou 11/06</div>
+        <div class="tags"><span class="tag warn">Sem base de referência</span><span class="tag">RL averbada</span></div>
+        <div class="score">Score de risco 0,84 · base de referência ausente</div>
+      </div>
+      <div class="card">
+        <div class="row1"><span class="cod">PR-4106902-…3B0D77</span><span class="risk md">RISCO MÉDIO</span></div>
+        <div class="muni">Paranavaí / PR · entrou 10/06</div>
+        <div class="tags"><span class="tag warn">Sobreposição c/ outro CAR</span></div>
+        <div class="score">Score de risco 0,57 · divergência total 8,1 ha</div>
+      </div>
+      <div class="card">
+        <div class="row1"><span class="cod">PR-4115804-…0CC410</span><span class="risk md">RISCO MÉDIO</span></div>
+        <div class="muni">Colorado / PR · entrou 09/06</div>
+        <div class="tags"><span class="tag">Área de Uso Restrito</span></div>
+        <div class="score">Score de risco 0,49 · divergência total 3,4 ha</div>
+      </div>
+      <div class="card">
+        <div class="row1"><span class="cod">PR-4119608-…7740A1</span><span class="risk lo">RISCO BAIXO</span></div>
+        <div class="muni">Santo Inácio / PR · entrou 08/06</div>
+        <div class="tags"><span class="tag div-ok">Sem sobreposição</span></div>
+        <div class="score">Score de risco 0,12 · candidato a aprovação rápida</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIREITA: detalhe do cadastro selecionado -->
+  <section class="panel detail">
+
+    <div class="dhead">
+      <div class="t">Fazenda Milho Verde IV</div>
+      <div class="sub">CAR PR-4110904-75A4929DDA9B43148838F3A422F9EB02 · Itaguajé / PR · 33,01 ha · 2,06 módulos fiscais</div>
+      <!-- Gap A: transparência da base de referência -->
+      <span class="basebadge">Base de referência: <b>atualizada em 03/2024</b> · imagem de satélite 11/2023</span>
+    </div>
+
+    <!-- Gap C: comparação declarado × referência lado a lado (modelo Retificação Dinamizada) -->
+    <div class="maps">
+      <div class="map">
+        <div class="cap">Declaração <span>polígonos do proprietário</span></div>
+        <svg viewBox="0 0 200 150" preserveAspectRatio="none">
+          <rect width="200" height="150" fill="#dfe4ea"/>
+          <polygon points="30,20 150,15 165,120 40,130" fill="#cfe3d6" stroke="#5b8a6f" stroke-width="2"/>
+          <polygon points="60,40 120,35 110,95 70,100" fill="#a9c7e8" stroke="#3a6ea5" stroke-width="1.5"/>
+          <text x="100" y="145" font-size="8" text-anchor="middle" fill="#6b7280">declarado: RVN 5,16 / consolidada 27,47 ha</text>
+        </svg>
+      </div>
+      <div class="map">
+        <div class="cap">Informações de referência <span>base oficial</span></div>
+        <svg viewBox="0 0 200 150" preserveAspectRatio="none">
+          <rect width="200" height="150" fill="#dfe4ea"/>
+          <polygon points="30,20 150,15 165,120 40,130" fill="#e6ece2" stroke="#5b8a6f" stroke-width="2"/>
+          <polygon points="64,42 118,38 112,92 72,96" fill="#cdd9e6" stroke="#3a6ea5" stroke-width="1.2"/>
+          <!-- camada de sobreposição destacada (Gap B) -->
+          <polygon points="120,70 175,75 170,135 118,128" fill="#f3b6ad" fill-opacity="0.75" stroke="#b42318" stroke-width="2" stroke-dasharray="4 3"/>
+          <text x="150" y="105" font-size="8" text-anchor="middle" fill="#8a1c12" font-weight="bold">sobreposição</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Gap B: alerta de sobreposição automático -->
+    <div class="alert">
+      <div class="ic">⚠️</div>
+      <div><b>Sobreposição detectada automaticamente.</b> 12,4 ha sobrepõem o assentamento PA Boa Vista
+      (INCRA). Casos com sobreposição não passam pela retificação automática e exigem decisão da analista.
+      <br><span style="color:var(--muted)">Detecção via PostGIS · ST_Intersection sobre a base de assentamentos.</span></div>
+    </div>
+
+    <!-- Comparação por feição (espelha a tabela da Retificação Dinamizada) -->
+    <table class="tbl">
+      <thead><tr><th>Feição</th><th>Declarado (ha)</th><th>Referência (ha)</th><th>Divergência (ha)</th></tr></thead>
+      <tbody>
+        <tr class="group"><td colspan="4">Cobertura do solo</td></tr>
+        <tr><td>Remanescente de vegetação nativa (RVN)</td><td>5,16</td><td>4,54</td><td class="div-ok">0,62</td></tr>
+        <tr><td>Área consolidada</td><td>27,47</td><td>28,47</td><td>1,00</td></tr>
+        <tr><td>Curso d'água</td><td>26,79</td><td>0,03</td><td class="div-hi">26,76</td></tr>
+        <tr class="group"><td colspan="4">Área de Preservação Permanente</td></tr>
+        <tr><td>APP de cursos d'água e nascentes</td><td>15,36</td><td>1,82</td><td class="div-hi">13,54</td></tr>
+        <tr class="group"><td colspan="4">Reserva Legal</td></tr>
+        <tr><td>Reserva Legal</td><td>5,16</td><td>4,54</td><td class="div-ok">0,62</td></tr>
+      </tbody>
+    </table>
+    <div class="memo"><b>Memória de cálculo (RL):</b> área líquida 33,01 ha · 2,06 módulos fiscais ·
+      enquadramento Art. 67 da Lei 12.651/2012 · RL = vegetação nativa existente em 22/07/2008 (4,54 ha).</div>
+
+    <!-- Ações: template de parecer + decisão (etapas 7-8 da jornada) -->
+    <div class="actions">
+      <button class="btn primary">Gerar parecer (template)</button>
+      <button class="btn">Aprovar</button>
+      <button class="btn warn">Exigir retificação</button>
+      <button class="btn warn">Indeferir</button>
+      <button class="btn">Abrir no mapa (Leaflet)</button>
+    </div>
+
+  </section>
+</div>
+
+<div class="legend">
+  <b>Como o painel ataca os gaps:</b>
+  Gap A (base de referência) → KPI "sem base" + selo "Base atualizada em…" no detalhe ·
+  Gap B (sobreposição) → KPI, tag na fila, camada destacada no mapa e alerta automático ·
+  Gap C (fragmentação) → declaração + referência + bases fundiárias num só painel, com comparação por feição e template de parecer.
+  &nbsp;Ver <code>docs/descobrir/jornada-luana.md</code> e <code>docs/definir/sintese-oportunidades.md</code>.
+</div>
+
+</body>
+</html>
