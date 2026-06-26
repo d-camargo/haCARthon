@@ -14,7 +14,7 @@ from ..core.detector import DetectorQGIS
 from ..core.priorizacao import calcular_score_risco
 from ..compat import (FIELD_STRING, FIELD_DOUBLE, FIELD_INT,
                       GEOM_POLYGON, WKB_MULTIPOLYGON, FAST_INSERT,
-                      PARAM_NUMBER_DOUBLE)
+                      PARAM_NUMBER_DOUBLE, GEOM_NO_CHECK)
 
 class DetectarSobreposicaoAlgorithm(QgsProcessingAlgorithm):
     INPUT_CAR = 'INPUT_CAR'
@@ -54,6 +54,10 @@ class DetectarSobreposicaoAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT_GEOMETRIAS, self.tr('Geometrias de Conflito (Interseções)')))
 
     def processAlgorithm(self, parameters, context, feedback):
+        # Dados reais (INCRA/SICAR) têm geometrias inválidas; não abortar — o detector
+        # aplica makeValid() em cada feição (ver core/detector.py).
+        context.setInvalidGeometryCheck(GEOM_NO_CHECK)
+
         layer_car = self.parameterAsSource(parameters, self.INPUT_CAR, context)
         layer_incra = self.parameterAsSource(parameters, self.INPUT_INCRA, context)
         tolerancia = self.parameterAsDouble(parameters, self.TOLERANCIA, context)

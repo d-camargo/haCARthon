@@ -5,7 +5,7 @@ Compatibilidade de enums entre QGIS 3.x (PyQt5) e QGIS 4.x (PyQt6).
 Centraliza, num só lugar, os pontos de API que mudaram de escopo entre as duas
 linhas, para o plugin rodar tanto na 3.x (LTR) quanto na 4.x sem espalhar `try/except`.
 """
-from qgis.core import Qgis, QgsFeatureSink, QgsProcessingParameterNumber
+from qgis.core import Qgis, QgsFeatureSink, QgsProcessingParameterNumber, QgsFeatureRequest
 
 # --- Tipos de campo (construtor do QgsField) ---
 # A partir do QGIS 3.38 o construtor usa QMetaType; antes, QVariant (removido no PyQt6).
@@ -43,4 +43,10 @@ except AttributeError:
     LOG_CRITICAL = Qgis.Critical
     LOG_INFO = Qgis.Info
     LOG_WARNING = Qgis.Warning
+
+# --- Política de geometria inválida (deixa o algoritmo tratar via makeValid) ---
+try:
+    GEOM_NO_CHECK = QgsFeatureRequest.InvalidGeometryCheck.GeometryNoCheck
+except AttributeError:
+    GEOM_NO_CHECK = QgsFeatureRequest.GeometryNoCheck
 

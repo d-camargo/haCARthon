@@ -7,7 +7,7 @@ from qgis.core import (QgsProcessingAlgorithm,
                        QgsField)
 
 from ..core.parecer import formatar_memoria_html
-from ..compat import FIELD_STRING, FAST_INSERT
+from ..compat import FIELD_STRING, FAST_INSERT, GEOM_NO_CHECK
 
 class GerarParecerAlgorithm(QgsProcessingAlgorithm):
     INPUT_FILA = 'INPUT_FILA'
@@ -39,6 +39,7 @@ class GerarParecerAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(QgsProcessingParameterFeatureSink(self.OUTPUT, self.tr('Fila com Pareceres (Pronta para o Atlas)')))
 
     def processAlgorithm(self, parameters, context, feedback):
+        context.setInvalidGeometryCheck(GEOM_NO_CHECK)
         layer_fila = self.parameterAsSource(parameters, self.INPUT_FILA, context)
 
         campos = layer_fila.fields()
