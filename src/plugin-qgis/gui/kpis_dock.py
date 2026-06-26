@@ -82,7 +82,7 @@ class KpisDockWidget(QDockWidget):
 
         self.btn_baixar = QPushButton("1 · Baixar CAR + assentamentos do município")
         self.btn_detectar = QPushButton("2 · Detectar e priorizar")
-        self.btn_parecer = QPushButton("3 · Gerar pareceres (p/ Atlas)")
+        self.btn_parecer = QPushButton("3 · Gerar parecer e abrir layout (Atlas)")
         self.btn_baixar.clicked.connect(self.acao_baixar)
         self.btn_detectar.clicked.connect(self.acao_detectar)
         self.btn_parecer.clicked.connect(self.acao_parecer)
@@ -256,12 +256,26 @@ class KpisDockWidget(QDockWidget):
         QApplication.setOverrideCursor(WAIT_CURSOR)
         try:
             self._status("Gerando o HTML dos pareceres…")
-            processing.runAndLoadResults(
+            res = processing.runAndLoadResults(
                 "prevalcar:preparar_pareceres",
                 {'INPUT_FILA': self._fila, 'OUTPUT': 'TEMPORARY_OUTPUT'})
-            self._status("Pareceres prontos: use o campo 'parecer_html' no Atlas do Layout.")
+            layer_parecer = QgsProject.instance().mapLayer(res['OUTPUT'])
+            suf = f" - {self._muni}" if self._muni else ""
+            if layer_parecer is not None:
+                layer_parecer.setName(f"Fila c/ Parecer{suf}")
+
+            self._status("Montando o layout (Atlas)…")
+            from ..core.layout_parecer import criar_layout_parecer
+            map_layers = [lyr for lyr in (self._geom, layer_parecer, self._incra) if lyr is not None]
+            layout = criar_layout_parecer(QgsProject.instance(), layer_parecer, map_layers,
+                                          nome=f"Parecer Pré-Val CAR{suf}")
+            if layout is not None:
+                self.iface.openLayoutDesigner(layout)
+                self._status("Layout aberto. Exporte o Atlas como PDF (1 página por imóvel em conflito).")
+            else:
+                self._status("Pareceres gerados, mas não foi possível montar o layout.", True)
         except Exception as e:
-            self._status(f"Erro ao gerar pareceres: {e}", True)
+            self._status(f"Erro ao gerar o layout do parecer: {e}", True)
         finally:
             QApplication.restoreOverrideCursor()
 
