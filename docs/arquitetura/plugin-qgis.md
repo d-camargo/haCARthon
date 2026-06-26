@@ -30,7 +30,7 @@ Logo, o MVP vai **da detecção até o rascunho de parecer/notificação (RAT)**
 | # | Decisão | Implicação |
 |---|---|---|
 | D1 | **Plugin novo e independente, escopo próprio (análise/validação)** | decisões guiadas pelas nossas necessidades, não por compatibilidade com terceiros |
-| D2 | **Native-first**: Processing provider **+ UX nativa do QGIS** (tabela de atributos, formulário de feição, estilo por regra, Layout+Atlas, Actions). **Única GUI custom = um painel de KPIs (dockwidget)** — KPI agregado não tem equivalente nativo | mínimo de código de GUI; menor manutenção; UX que a analista já conhece |
+| D2 | **Native-first** no motor (algoritmos Processing) **+ um painel único (dockwidget)** que orquestra o fluxo (baixar → detectar → parecer via `processing.run`) e mostra os KPIs. Revisado em 2026-06-26: teste real mostrou que 3 diálogos do toolbox eram atrito demais para a Luana → consolidado em **1 janela com botões**. Os algoritmos seguem no toolbox (reuso, sem duplicar lógica). UX nativa (tabela=fila, estilo, Atlas) preservada | menos cliques/janelas; o painel é orquestração fina sobre os mesmos algoritmos |
 | D3 | **QGIS puro** (QgsGeometry), **PostGIS opcional** | roda offline na máquina dela; PostGIS só p/ escala (UF) |
 | D4 | **MVP = detecção + fila + parecer/RAT** | entrega fim-a-fim, fiel ao fluxo da analista |
 
