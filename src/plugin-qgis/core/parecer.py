@@ -28,7 +28,6 @@ def formatar_memoria_html(json_str, cod_imovel, area_imovel_ha):
 
     td = "border:1px solid #bbb;padding:3px;"
     h = [f"<div style='{base_style}'>"]
-    h.append("<b style='font-size:10pt;color:#2c3e50;'>Memória de cálculo — divergências de geometria</b>")
     h.append(f"<p style='margin:2px 0;'>Imóvel <b>{cod_imovel}</b> · área declarada "
              f"{area_imovel_ha:.2f} ha · {len(sobreposicoes)} sobreposição(ões) · "
              f"total {total_area:.2f} ha</p>")

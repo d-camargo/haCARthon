@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Print Layout com Atlas para o parecer/RAT: 1+ páginas por imóvel em conflito.
-Cabeçalho com ícone, mapa (zoom no imóvel), legenda, escala gráfica e numérica, e o
-parecer em HTML que flui para novas páginas quando há muitas sobreposições.
+Print Layout com Atlas para o parecer/RAT, em 2 páginas (A4 retrato) por imóvel:
+  Página 1: cabeçalho centralizado (logo grande + identificação) + mapa + legenda/escala.
+  Página 2: logo + cabeçalho "Memória de Cálculo" centralizado + o parecer (HTML).
 """
 import os
 from qgis.core import (Qgis, QgsPrintLayout, QgsLayoutItemMap, QgsLayoutItemLabel,
                        QgsLayoutItemLegend, QgsLayoutItemScaleBar, QgsLayoutItemPicture,
-                       QgsLayoutPoint, QgsLayoutSize, QgsUnitTypes)
+                       QgsLayoutItemPage, QgsLayoutPoint, QgsLayoutSize, QgsUnitTypes)
 from qgis.PyQt.QtGui import QFont, QColor
+from qgis.PyQt.QtCore import Qt
 
 # --- compat de enums (Qt5/Qt6) ---
 try:
@@ -23,13 +24,54 @@ try:
     LABEL_HTML = QgsLayoutItemLabel.Mode.ModeHtml
 except AttributeError:
     LABEL_HTML = QgsLayoutItemLabel.ModeHtml
+try:
+    PIC_ZOOM = QgsLayoutItemPicture.ResizeMode.Zoom
+except AttributeError:
+    PIC_ZOOM = QgsLayoutItemPicture.Zoom
+try:
+    PORTRAIT = QgsLayoutItemPage.Orientation.Portrait
+except AttributeError:
+    PORTRAIT = QgsLayoutItemPage.Portrait
+try:
+    HCENTER = Qt.AlignmentFlag.AlignHCenter
+    VCENTER = Qt.AlignmentFlag.AlignVCenter
+except AttributeError:
+    HCENTER = Qt.AlignHCenter
+    VCENTER = Qt.AlignVCenter
 
 _ICON = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'icon.svg')
+_PW = 210.0  # largura A4 (mm)
 
 
-def _coloca(item, x, y, w, h):
-    item.attemptMove(QgsLayoutPoint(x, y, MM))
+def _coloca(item, x, y, w, h, page=0):
     item.attemptResize(QgsLayoutSize(w, h, MM))
+    item.attemptMove(QgsLayoutPoint(x, y, MM), True, False, page)
+
+
+def _logo(layout, lado, y, page):
+    if not os.path.exists(_ICON):
+        return
+    pic = QgsLayoutItemPicture(layout)
+    pic.setPicturePath(_ICON)
+    pic.setResizeMode(PIC_ZOOM)
+    layout.addLayoutItem(pic)
+    _coloca(pic, (_PW - lado) / 2.0, y, lado, lado, page)  # centralizado
+
+
+def _label(layout, texto, x, y, w, h, page, size, bold=False, color=(60, 60, 60), center=False, html=False):
+    lb = QgsLayoutItemLabel(layout)
+    if html:
+        lb.setMode(LABEL_HTML)
+    lb.setText(texto)
+    f = QFont(); f.setPointSize(size); f.setBold(bold)
+    lb.setFont(f)
+    lb.setFontColor(QColor(*color))
+    if center:
+        lb.setHAlign(HCENTER)
+        lb.setVAlign(VCENTER)
+    layout.addLayoutItem(lb)
+    _coloca(lb, x, y, w, h, page)
+    return lb
 
 
 def criar_layout_parecer(project, cobertura, map_layers, nome="Parecer Pré-Val CAR"):
@@ -42,35 +84,23 @@ def criar_layout_parecer(project, cobertura, map_layers, nome="Parecer Pré-Val 
         manager.removeLayout(antigo)
 
     layout = QgsPrintLayout(project)
-    layout.initializeDefaults()  # A4 retrato
+    layout.initializeDefaults()  # página 1 (A4 retrato)
     layout.setName(nome)
+    pagina2 = QgsLayoutItemPage(layout)
+    pagina2.setPageSize('A4', PORTRAIT)
+    layout.pageCollection().addPage(pagina2)
 
-    # --- Cabeçalho: ícone + título + subtítulo ---
-    if os.path.exists(_ICON):
-        pic = QgsLayoutItemPicture(layout)
-        pic.setPicturePath(_ICON)
-        layout.addLayoutItem(pic)
-        _coloca(pic, 180, 6, 20, 20)
+    # ===================== PÁGINA 1: identificação + mapa =====================
+    _logo(layout, 60, 10, page=0)
+    _label(layout, "PARECER DE PRÉ-VALIDAÇÃO TÉCNICA — Pré-Val CAR",
+           10, 74, 190, 10, 0, size=14, bold=True, color=(44, 62, 80), center=True)
+    _label(layout, "Imóvel: [% cod_imovel %]   ·   Município: [% municipio %]   ·   "
+                   "Score de risco: [% round(score, 1) %]",
+           10, 85, 190, 7, 0, size=10, color=(90, 90, 90), center=True)
 
-    titulo = QgsLayoutItemLabel(layout)
-    titulo.setText("PARECER DE PRÉ-VALIDAÇÃO TÉCNICA — Pré-Val CAR")
-    f = QFont(); f.setPointSize(13); f.setBold(True)
-    titulo.setFont(f); titulo.setFontColor(QColor(44, 62, 80))
-    layout.addLayoutItem(titulo)
-    _coloca(titulo, 10, 8, 165, 9)
-
-    sub = QgsLayoutItemLabel(layout)
-    sub.setText("Imóvel: [% cod_imovel %]   ·   Município: [% municipio %]   ·   "
-                "Score de risco: [% round(score, 1) %]")
-    fs = QFont(); fs.setPointSize(9)
-    sub.setFont(fs); sub.setFontColor(QColor(90, 90, 90))
-    layout.addLayoutItem(sub)
-    _coloca(sub, 10, 18, 165, 7)
-
-    # --- Mapa: apenas os polígonos objeto do parecer (conflitos + imóvel) ---
     mapa = QgsLayoutItemMap(layout)
     layout.addLayoutItem(mapa)
-    _coloca(mapa, 10, 28, 190, 88)
+    _coloca(mapa, 10, 96, 190, 158, 0)
     mapa.setFrameEnabled(True)
     if map_layers:
         mapa.setLayers(map_layers)
@@ -83,36 +113,34 @@ def criar_layout_parecer(project, cobertura, map_layers, nome="Parecer Pré-Val 
     mapa.setAtlasScalingMode(MAP_AUTO)
     mapa.setAtlasMargin(0.25)
 
-    # --- Legenda ---
     legenda = QgsLayoutItemLegend(layout)
     legenda.setTitle("Legenda")
     legenda.setLinkedMap(mapa)
     legenda.setAutoUpdateModel(True)
     layout.addLayoutItem(legenda)
-    _coloca(legenda, 10, 119, 90, 22)
+    _coloca(legenda, 10, 257, 95, 33, 0)
 
-    # --- Escala gráfica + numérica ---
     barra = QgsLayoutItemScaleBar(layout)
     barra.setStyle('Single Box')
     barra.setLinkedMap(mapa)
     barra.applyDefaultSize()
     layout.addLayoutItem(barra)
-    _coloca(barra, 110, 120, 90, 12)
+    _coloca(barra, 120, 258, 80, 12, 0)
 
     barra_num = QgsLayoutItemScaleBar(layout)
     barra_num.setStyle('Numeric')
     barra_num.setLinkedMap(mapa)
     layout.addLayoutItem(barra_num)
-    _coloca(barra_num, 110, 133, 90, 6)
+    _coloca(barra_num, 120, 272, 80, 6, 0)
 
-    # --- Parecer (rótulo HTML / Qt rich text — esta build não tem WebKit) ---
-    parecer = QgsLayoutItemLabel(layout)
-    parecer.setMode(LABEL_HTML)
-    parecer.setText("[% parecer_html %]")
-    layout.addLayoutItem(parecer)
-    _coloca(parecer, 10, 144, 190, 145)
+    # ===================== PÁGINA 2: memória de cálculo =====================
+    _logo(layout, 40, 10, page=1)
+    _label(layout, "MEMÓRIA DE CÁLCULO",
+           10, 54, 190, 12, 1, size=18, bold=True, color=(44, 62, 80), center=True)
+    _label(layout, "[% parecer_html %]",
+           10, 70, 190, 215, 1, size=9, color=(51, 51, 51), html=True)
 
-    # --- Atlas: 1 página por imóvel em conflito, ordenado por score desc. ---
+    # ===================== Atlas =====================
     atlas = layout.atlas()
     atlas.setEnabled(True)
     atlas.setCoverageLayer(cobertura)
