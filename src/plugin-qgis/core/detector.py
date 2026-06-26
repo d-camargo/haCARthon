@@ -17,7 +17,9 @@ class DetectorQGIS:
         self.da = QgsDistanceArea()
         # QgsProcessingFeatureSource não expõe transformContext(); usa o do projeto.
         self.da.setSourceCrs(self.crs, QgsProject.instance().transformContext())
-        self.da.setEllipsoid('EPSG:4674') # SIRGAS 2000
+        # Elipsoide do SIRGAS 2000 é o GRS80. ('EPSG:4674' é um CRS, não um
+        # elipsoide — passá-lo aqui faz o measureArea cair para área planar em graus².)
+        self.da.setEllipsoid('GRS80')
         
         self.index_car = QgsSpatialIndex(self.layer_car.getFeatures())
         self.index_assentamento = None
