@@ -2,9 +2,16 @@
 """
 Monta um Print Layout com Atlas para o parecer/RAT: 1 página por imóvel em conflito,
 com mapa (zoom no imóvel) + o HTML do parecer (campo 'parecer_html').
+
+Notas:
+- Expressões usam os campos SEM aspas duplas ([% cod_imovel %]); em rótulos HTML as
+  aspas viram &quot; e quebram a expressão.
+- Título/subtítulo ficam em modo fonte (avaliação de expressão confiável); só o parecer
+  usa modo HTML.
 """
 from qgis.core import (Qgis, QgsPrintLayout, QgsLayoutItemMap, QgsLayoutItemLabel,
                        QgsLayoutPoint, QgsLayoutSize, QgsUnitTypes)
+from qgis.PyQt.QtGui import QFont, QColor
 
 # --- compat de enums (Qt5/Qt6) ---
 try:
@@ -28,8 +35,8 @@ def _coloca(item, x, y, w, h):
 
 def criar_layout_parecer(project, cobertura, map_layers, nome="Parecer Pré-Val CAR"):
     """
-    cobertura  : camada com 'parecer_html', 'cod_imovel', 'conflito' (saída do passo 3).
-    map_layers : camadas a desenhar no mapa (geometrias de conflito, fila, assentamentos).
+    cobertura  : camada com 'parecer_html', 'cod_imovel', 'municipio', 'score', 'conflito'.
+    map_layers : camadas a desenhar no mapa.
     Retorna o QgsPrintLayout (já adicionado ao gerenciador do projeto).
     """
     if cobertura is None:
@@ -44,16 +51,24 @@ def criar_layout_parecer(project, cobertura, map_layers, nome="Parecer Pré-Val 
     layout.initializeDefaults()  # A4 retrato
     layout.setName(nome)
 
-    # Título (HTML + expressões do Atlas)
+    # Título (modo fonte)
     titulo = QgsLayoutItemLabel(layout)
-    titulo.setMode(LABEL_HTML)
-    titulo.setText(
-        '<b style="font-size:13pt; color:#2c3e50;">PARECER DE PRÉ-VALIDAÇÃO TÉCNICA</b><br>'
-        '<span style="color:#555;">Imóvel: [% "cod_imovel" %] &nbsp;·&nbsp; '
-        'Município: [% "municipio" %] &nbsp;·&nbsp; Score de risco: [% round("score",1) %]</span>'
-    )
+    titulo.setText("PARECER DE PRÉ-VALIDAÇÃO TÉCNICA — Pré-Val CAR")
+    f = QFont(); f.setPointSize(13); f.setBold(True)
+    titulo.setFont(f)
+    titulo.setFontColor(QColor(44, 62, 80))
     layout.addLayoutItem(titulo)
-    _coloca(titulo, 10, 8, 190, 16)
+    _coloca(titulo, 10, 8, 190, 9)
+
+    # Subtítulo com expressões do Atlas (campos SEM aspas duplas)
+    sub = QgsLayoutItemLabel(layout)
+    sub.setText("Imóvel: [% cod_imovel %]   ·   Município: [% municipio %]   ·   "
+                "Score de risco: [% round(score, 1) %]")
+    fs = QFont(); fs.setPointSize(9)
+    sub.setFont(fs)
+    sub.setFontColor(QColor(90, 90, 90))
+    layout.addLayoutItem(sub)
+    _coloca(sub, 10, 17, 190, 7)
 
     # Mapa (segue o Atlas, com zoom no imóvel)
     mapa = QgsLayoutItemMap(layout)
@@ -71,10 +86,10 @@ def criar_layout_parecer(project, cobertura, map_layers, nome="Parecer Pré-Val 
     mapa.setAtlasScalingMode(MAP_AUTO)
     mapa.setAtlasMargin(0.25)
 
-    # Parecer (HTML por feição)
+    # Parecer (modo HTML; expressão sem aspas duplas)
     parecer = QgsLayoutItemLabel(layout)
     parecer.setMode(LABEL_HTML)
-    parecer.setText('[% "parecer_html" %]')
+    parecer.setText("[% parecer_html %]")
     layout.addLayoutItem(parecer)
     _coloca(parecer, 10, 125, 190, 162)
 

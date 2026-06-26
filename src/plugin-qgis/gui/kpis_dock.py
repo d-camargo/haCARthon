@@ -270,8 +270,13 @@ class KpisDockWidget(QDockWidget):
             layout = criar_layout_parecer(QgsProject.instance(), layer_parecer, map_layers,
                                           nome=f"Parecer Pré-Val CAR{suf}")
             if layout is not None:
-                self.iface.openLayoutDesigner(layout)
-                self._status("Layout aberto. Exporte o Atlas como PDF (1 página por imóvel em conflito).")
+                designer = self.iface.openLayoutDesigner(layout)
+                try:
+                    designer.setAtlasPreviewEnabled(True)  # já abre iterando as feições
+                except Exception:
+                    pass
+                self._status("Layout aberto (preview do Atlas ligado). "
+                             "Exporte como PDF: Atlas → Exportar como PDF (1 página por imóvel).")
             else:
                 self._status("Pareceres gerados, mas não foi possível montar o layout.", True)
         except Exception as e:
