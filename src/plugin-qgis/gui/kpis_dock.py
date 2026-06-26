@@ -209,6 +209,12 @@ class KpisDockWidget(QDockWidget):
             res = processing.runAndLoadResults("prevalcar:detectar_sobreposicao", params)
             self._fila = QgsProject.instance().mapLayer(res['OUTPUT_FILA'])
             self._geom = QgsProject.instance().mapLayer(res['OUTPUT_GEOMETRIAS'])
+
+            # Estilo automático: conflitos em vermelho, fila graduada por risco.
+            from ..estilos import estilo_conflitos, estilo_fila
+            estilo_fila(self._fila)
+            estilo_conflitos(self._geom)
+
             self.update_kpis()
             self._status("Detecção concluída. Veja os KPIs e a 'Fila Priorizada'.")
         except Exception as e:
