@@ -41,11 +41,12 @@ def load_sicar_layer(uf, municipio, layer_name=None):
     if not layer_name:
         layer_name = f"CAR - {municipio} ({uf})"
 
+    municipio_cql = municipio.replace("'", "''")  # escapa aspa simples no CQL
     params = {
         'service': 'WFS', 'version': '2.0.0', 'request': 'GetFeature',
         'typeNames': f'sicar:sicar_imoveis_{uf.lower()}',
         'srsName': 'EPSG:4674', 'outputFormat': 'application/json',
-        'CQL_FILTER': f"municipio='{municipio}'",
+        'CQL_FILTER': f"municipio='{municipio_cql}'",
     }
     url = SICAR_WFS_BASE + '?' + urllib.parse.urlencode(params)
 

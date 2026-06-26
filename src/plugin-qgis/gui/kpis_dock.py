@@ -148,6 +148,16 @@ class KpisDockWidget(QDockWidget):
             self._status("Informe UF e Município.", True)
             return
 
+        # Resolve a grafia oficial (IBGE) — aceita "querencia do norte", "MARINGA" etc.
+        from ..core.municipios import resolver_municipio
+        canonico, status = resolver_municipio(uf, muni)
+        if status == 'nao_existe':
+            self._status(f"Município '{muni}' não existe em {uf}. Verifique a grafia.", True)
+            return
+        if canonico and canonico != muni:
+            muni = canonico
+            self.muni_edit.setText(canonico)  # mostra a grafia corrigida
+
         QApplication.setOverrideCursor(WAIT_CURSOR)
         try:
             self._status(f"Baixando imóveis do CAR de {muni}/{uf}…")
@@ -155,6 +165,9 @@ class KpisDockWidget(QDockWidget):
                 "prevalcar:baixar_sicar",
                 {'UF': uf, 'MUNICIPIO': muni, 'OUTPUT': 'TEMPORARY_OUTPUT'})
             self._car = QgsProject.instance().mapLayer(r1['OUTPUT'])
+            if self._car is not None and self._car.featureCount() == 0:
+                self._status(f"Nenhum imóvel do CAR retornado para {muni}/{uf}. "
+                             f"Confira a grafia do município.", True)
 
             self._status(f"Baixando assentamentos do INCRA de {uf} e filtrando {muni}…")
             r2 = processing.runAndLoadResults(
@@ -181,8 +194,10 @@ class KpisDockWidget(QDockWidget):
         ids = [f.id() for f in incra_estado.getFeatures()
                if self._norm(f['municipio']) == alvo]
         if not ids:
-            self._status(f"Nenhum assentamento em {muni}; mantendo os do estado.")
-            return incra_estado
+            # Município válido, mas sem assentamentos: remove a camada estadual e segue só com CAR×CAR.
+            QgsProject.instance().removeMapLayer(incra_estado.id())
+            self._status(f"Nenhum assentamento do INCRA em {muni}.")
+            return None
         incra_estado.selectByIds(ids)
         res = processing.runAndLoadResults(
             "native:saveselectedfeatures",
