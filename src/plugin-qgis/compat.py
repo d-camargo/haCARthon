@@ -34,3 +34,13 @@ try:
     PARAM_NUMBER_DOUBLE = QgsProcessingParameterNumber.Type.Double
 except AttributeError:
     PARAM_NUMBER_DOUBLE = QgsProcessingParameterNumber.Double
+
+try:
+    LOG_CRITICAL = Qgis.MessageLevel.Critical
+    LOG_INFO = Qgis.MessageLevel.Info
+    LOG_WARNING = Qgis.MessageLevel.Warning
+except AttributeError:
+    LOG_CRITICAL = Qgis.Critical
+    LOG_INFO = Qgis.Info
+    LOG_WARNING = Qgis.Warning
+

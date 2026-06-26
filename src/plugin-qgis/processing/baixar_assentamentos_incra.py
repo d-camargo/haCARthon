@@ -3,7 +3,8 @@ from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (QgsProcessingAlgorithm,
                        QgsProcessingParameterString,
                        QgsProcessingParameterFeatureSink,
-                       QgsField)
+                       QgsField,
+                       QgsGeometry)
 from ..core.wfs import load_incra_layer
 from ..compat import FIELD_STRING, FAST_INSERT
 
@@ -42,7 +43,8 @@ class BaixarAssentamentosAlgorithm(QgsProcessingAlgorithm):
         wfs_layer = load_incra_layer(uf)
         
         if not wfs_layer.isValid():
-            feedback.reportError(f"Falha ao conectar no WFS do INCRA para a UF {uf}. Verifique a internet.")
+            err_msg = getattr(wfs_layer, 'error_msg', 'Erro desconhecido')
+            feedback.reportError(f"Falha ao conectar no WFS do INCRA para a UF {uf}. Detalhes: {err_msg}")
             return {}
 
         total = wfs_layer.featureCount()
@@ -94,8 +96,14 @@ class BaixarAssentamentosAlgorithm(QgsProcessingAlgorithm):
                 attr[fonte_idx] = 'INCRA i3geo'
                 
             feature.setAttributes(attr)
-            
-            # A geometria com os eixos corrigidos já vem do InvertAxisOrientation no WFS.
+
+            # O GDAL lê o WFS 1.0.0 do INCRA como lat,lon — corrige o eixo (X <-> Y).
+            geom = QgsGeometry(feature.geometry())
+            abs_geom = geom.get()
+            if abs_geom is not None:
+                abs_geom.swapXy()
+                feature.setGeometry(geom)
+
             sink.addFeature(feature, FAST_INSERT)
             feedback.setProgress(int(current * step))
 

@@ -44,7 +44,8 @@ class BaixarSicarAlgorithm(QgsProcessingAlgorithm):
         wfs_layer = load_sicar_layer(uf, municipio)
         
         if not wfs_layer.isValid():
-            feedback.reportError(f"Falha ao conectar no WFS do SICAR para {uf} - {municipio}")
+            err_msg = getattr(wfs_layer, 'error_msg', 'Erro desconhecido')
+            feedback.reportError(f"Falha ao conectar no WFS do SICAR para {uf} - {municipio}. Detalhes: {err_msg}")
             return {}
 
         total = wfs_layer.featureCount()

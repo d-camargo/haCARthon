@@ -1,66 +1,77 @@
 # -*- coding: utf-8 -*-
+"""
+Carregamento das camadas do SICAR e do INCRA.
+
+Decisão (após teste): o provider WFS NATIVO do QGIS expirava (~60s) no endpoint i3geo do
+INCRA. Adotamos os caminhos comprovados no pipeline (`src/pipeline-ingestao/`):
+- SICAR : GET direto do GeoServer em GeoJSON (outputFormat=application/json) + CQL_FILTER.
+- INCRA : driver WFS do GDAL/OGR (prefixo "WFS:"), rápido e estável. O i3geo (MapServer
+          WFS 1.0.0) devolve lat,lon — o eixo é corrigido no algoritmo de download.
+"""
 from qgis.core import QgsVectorLayer
 import urllib.parse
+import urllib.request
+import tempfile
 from datetime import datetime
 
-def build_sicar_wfs_uri(uf, municipio):
-    """
-    Constrói a URI WFS para acessar o geoserver do SICAR filtrado por município.
-    """
-    uf_lower = uf.lower()
-    muni_encoded = urllib.parse.quote(municipio)
-    
-    base_url = "https://geoserver.car.gov.br/geoserver/sicar/wfs"
-    # Adicionamos srsName=EPSG:4674 para garantir a projeção
-    uri = f"WFS:{base_url}?service=WFS&version=2.0.0&request=GetFeature&typeNames=sicar:sicar_imoveis_{uf_lower}&srsName=EPSG:4674&CQL_FILTER=municipio='{muni_encoded}'"
-    return uri
+SICAR_WFS_BASE = "https://geoserver.car.gov.br/geoserver/sicar/wfs"
+INCRA_WFS_BASE = "https://acervofundiario.incra.gov.br/i3geo/ogc.php"
+_UA = "PreValCAR-QGIS/0.1 (+haCARthon)"
 
-def load_sicar_layer(uf, municipio, layer_name=None):
-    """
-    Carrega a camada WFS do SICAR como um QgsVectorLayer.
-    """
-    if not layer_name:
-        layer_name = f"CAR - {municipio} ({uf})"
-    
-    uri = build_sicar_wfs_uri(uf, municipio)
-    layer = QgsVectorLayer(uri, layer_name, "WFS")
-    
-    # Registra proveniência da base
-    layer.setCustomProperty("data_extracao", datetime.now().strftime("%Y-%m-%d"))
-    layer.setCustomProperty("fonte", "SICAR WFS")
-    
+
+def _invalid(layer_name, msg):
+    layer = QgsVectorLayer("", layer_name, "ogr")
+    layer.error_msg = msg
     return layer
 
-def build_incra_wfs_uri(uf):
-    """
-    Constrói a URI WFS para acessar o geoserver i3geo do INCRA.
-    O WFS 1.0.0 do MapServer do INCRA envia lat,lon. 
-    Usamos InvertAxisOrientation=1 para o PyQGIS tratar isso nativamente para EPSG:4674 (lon,lat).
-    """
-    uf_lower = uf.lower()
-    base_url = "https://acervofundiario.incra.gov.br/i3geo/ogc.php"
-    
-    uri = f"WFS:{base_url}?service=WFS&version=1.0.0&request=GetFeature&typename=assentamentos_{uf_lower}&srsName=EPSG:4674&InvertAxisOrientation=1"
-    return uri
+
+def load_sicar_layer(uf, municipio, layer_name=None):
+    """Imóveis do SICAR (GeoJSON via HTTP), filtrados por município (CQL_FILTER)."""
+    if not layer_name:
+        layer_name = f"CAR - {municipio} ({uf})"
+
+    params = {
+        'service': 'WFS', 'version': '2.0.0', 'request': 'GetFeature',
+        'typeNames': f'sicar:sicar_imoveis_{uf.lower()}',
+        'srsName': 'EPSG:4674', 'outputFormat': 'application/json',
+        'CQL_FILTER': f"municipio='{municipio}'",
+    }
+    url = SICAR_WFS_BASE + '?' + urllib.parse.urlencode(params)
+
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': _UA})
+        with urllib.request.urlopen(req, timeout=180) as resp:
+            data = resp.read()
+        tmp = tempfile.NamedTemporaryFile(suffix='.geojson', delete=False)
+        tmp.write(data)
+        tmp.close()
+        layer = QgsVectorLayer(tmp.name, layer_name, "ogr")
+    except Exception as e:
+        return _invalid(layer_name, f"{type(e).__name__}: {e}")
+
+    if not layer.isValid():
+        return _invalid(layer_name, "GeoJSON baixado, mas o GDAL não conseguiu abrir a camada.")
+
+    layer.setCustomProperty("data_extracao", datetime.now().strftime("%Y-%m-%d"))
+    layer.setCustomProperty("fonte", "SICAR WFS (GeoJSON)")
+    return layer
+
 
 def load_incra_layer(uf, layer_name=None):
-    """
-    Carrega a camada WFS do INCRA como um QgsVectorLayer.
-    """
+    """Assentamentos do INCRA via driver WFS do GDAL/OGR (eixo corrigido no algoritmo)."""
     if not layer_name:
         layer_name = f"Assentamentos INCRA - {uf}"
-        
-    uri = build_incra_wfs_uri(uf)
-    layer = QgsVectorLayer(uri, layer_name, "WFS")
-    
-    if layer.isValid():
-        layer.setCustomProperty("data_extracao", datetime.now().strftime("%Y-%m-%d"))
-        layer.setCustomProperty("fonte", "INCRA i3geo")
-        
-        # Aliasing para visualização no QGIS, caso não seja exportado para outra camada
-        idx = layer.fields().lookupField('nome_projeto')
-        if idx != -1:
-            layer.setEditorWidgetSetup(idx, layer.editorWidgetSetup(idx))
-            layer.setFieldAlias(idx, 'nome')
 
+    src = f"WFS:{INCRA_WFS_BASE}?tema=assentamentos_{uf.lower()}"
+    layer = QgsVectorLayer(src, layer_name, "ogr")
+
+    if not layer.isValid():
+        return _invalid(
+            layer_name,
+            "GDAL não conseguiu abrir o WFS do INCRA "
+            "(acervofundiario.incra.gov.br/i3geo). Verifique a conectividade."
+        )
+
+    layer.setCustomProperty("data_extracao", datetime.now().strftime("%Y-%m-%d"))
+    layer.setCustomProperty("fonte", "INCRA i3geo (GDAL WFS)")
     return layer
