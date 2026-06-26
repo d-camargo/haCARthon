@@ -115,6 +115,15 @@ class KpisDockWidget(QDockWidget):
         QgsProject.instance().layersAdded.connect(self.update_kpis)
         QgsProject.instance().layersRemoved.connect(self.update_kpis)
 
+    def disconnect_signals(self):
+        # Chamado no unload do plugin para evitar sinais para um widget destruído.
+        for sig in (QgsProject.instance().layersAdded,
+                    QgsProject.instance().layersRemoved):
+            try:
+                sig.disconnect(self.update_kpis)
+            except (TypeError, RuntimeError):
+                pass
+
     def update_kpis(self):
         layers = QgsProject.instance().mapLayers().values()
         

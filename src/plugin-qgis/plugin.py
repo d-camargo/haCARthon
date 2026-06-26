@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from qgis.core import QgsApplication
 from qgis.PyQt.QtCore import Qt
+from qgis.PyQt import sip
 
 from .provider import PreValCarProvider
 from .gui.kpis_dock import KpisDockWidget
@@ -29,7 +30,14 @@ class PreValCarPlugin:
 
     def unload(self):
         QgsApplication.processingRegistry().removeProvider(self.provider)
-        
-        if self.dockwidget:
+
+        if self.dockwidget is not None:
+            self.dockwidget.disconnect_signals()
             self.iface.removeDockWidget(self.dockwidget)
-            self.dockwidget.deleteLater()
+            # Destruição síncrona evita o aviso de "widget duplicado" no reload
+            # (o deleteLater() é assíncrono e o initGui recria antes de rodar).
+            try:
+                sip.delete(self.dockwidget)
+            except Exception:
+                self.dockwidget.deleteLater()
+            self.dockwidget = None
