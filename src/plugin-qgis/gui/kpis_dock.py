@@ -266,7 +266,8 @@ class KpisDockWidget(QDockWidget):
 
             self._status("Montando o layout (Atlas)…")
             from ..core.layout_parecer import criar_layout_parecer
-            map_layers = [lyr for lyr in (self._geom, layer_parecer, self._incra) if lyr is not None]
+            # Mapa do parecer: só os polígonos objeto do parecer (conflitos + imóvel).
+            map_layers = [lyr for lyr in (self._geom, layer_parecer) if lyr is not None]
             layout = criar_layout_parecer(QgsProject.instance(), layer_parecer, map_layers,
                                           nome=f"Parecer Pré-Val CAR{suf}")
             if layout is not None:
