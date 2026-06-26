@@ -4,7 +4,10 @@ from qgis.core import (QgsProcessingAlgorithm,
                        QgsProcessingParameterString,
                        QgsProcessingParameterFeatureSink,
                        QgsField,
-                       QgsGeometry)
+                       QgsGeometry,
+                       QgsProject,
+                       QgsCoordinateReferenceSystem,
+                       QgsCoordinateTransform)
 from ..core.wfs import load_incra_layer
 from ..compat import FIELD_STRING, FAST_INSERT
 
@@ -48,7 +51,11 @@ class BaixarAssentamentosAlgorithm(QgsProcessingAlgorithm):
             return {}
 
         total = wfs_layer.featureCount()
-        feedback.pushInfo(f"Encontrados {total} assentamentos. Baixando e padronizando...")
+        feedback.pushInfo(f"Encontrados {total} assentamentos. Baixando, reprojetando para SIRGAS 2000 e padronizando...")
+
+        # Saída em SIRGAS 2000 (EPSG:4674), igual ao CAR.
+        crs_dest = QgsCoordinateReferenceSystem('EPSG:4674')
+        xform = QgsCoordinateTransform(wfs_layer.sourceCrs(), crs_dest, QgsProject.instance())
 
         fields = wfs_layer.fields()
         # Garante a existência do campo 'nome'
@@ -62,7 +69,7 @@ class BaixarAssentamentosAlgorithm(QgsProcessingAlgorithm):
 
         (sink, dest_id) = self.parameterAsSink(
             parameters, self.OUTPUT, context,
-            fields, wfs_layer.wkbType(), wfs_layer.sourceCrs()
+            fields, wfs_layer.wkbType(), crs_dest
         )
 
         if sink is None:
@@ -97,11 +104,13 @@ class BaixarAssentamentosAlgorithm(QgsProcessingAlgorithm):
                 
             feature.setAttributes(attr)
 
-            # O GDAL lê o WFS 1.0.0 do INCRA como lat,lon — corrige o eixo (X <-> Y).
+            # O GDAL lê o WFS 1.0.0 do INCRA como lat,lon — corrige o eixo (X <-> Y)
+            # e reprojeta de 4326 para 4674 (SIRGAS 2000).
             geom = QgsGeometry(feature.geometry())
             abs_geom = geom.get()
             if abs_geom is not None:
                 abs_geom.swapXy()
+                geom.transform(xform)
                 feature.setGeometry(geom)
 
             sink.addFeature(feature, FAST_INSERT)

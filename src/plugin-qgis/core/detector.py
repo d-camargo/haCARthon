@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from qgis.core import QgsSpatialIndex, QgsDistanceArea
+from qgis.core import QgsSpatialIndex, QgsDistanceArea, QgsProject
 from typing import List, Dict, Any
 
 class DetectorQGIS:
@@ -15,7 +15,8 @@ class DetectorQGIS:
         
         # Configurar cálculo de área geodésica em hectares (SIRGAS 2000)
         self.da = QgsDistanceArea()
-        self.da.setSourceCrs(self.crs, self.layer_car.transformContext())
+        # QgsProcessingFeatureSource não expõe transformContext(); usa o do projeto.
+        self.da.setSourceCrs(self.crs, QgsProject.instance().transformContext())
         self.da.setEllipsoid('EPSG:4674') # SIRGAS 2000
         
         self.index_car = QgsSpatialIndex(self.layer_car.getFeatures())
