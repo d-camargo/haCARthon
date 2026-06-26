@@ -6,6 +6,7 @@ from qgis.core import (QgsProcessingAlgorithm,
                        QgsProcessingParameterFeatureSink,
                        QgsFeature,
                        QgsField,
+                       QgsFields,
                        QgsGeometry)
 import json
 
@@ -59,13 +60,12 @@ class DetectarSobreposicaoAlgorithm(QgsProcessingAlgorithm):
 
         # 1. Configurar saídas
         # Geometrias (interseções) — saída MultiPolygon para acomodar interseções multipart
-        campos_conflito = [
-            QgsField('tipo', FIELD_STRING),
-            QgsField('imovel', FIELD_STRING),
-            QgsField('contra', FIELD_STRING),
-            QgsField('sobrep_ha', FIELD_DOUBLE),
-            QgsField('pct_imovel', FIELD_DOUBLE)
-        ]
+        campos_conflito = QgsFields()
+        campos_conflito.append(QgsField('tipo', FIELD_STRING))
+        campos_conflito.append(QgsField('imovel', FIELD_STRING))
+        campos_conflito.append(QgsField('contra', FIELD_STRING))
+        campos_conflito.append(QgsField('sobrep_ha', FIELD_DOUBLE))
+        campos_conflito.append(QgsField('pct_imovel', FIELD_DOUBLE))
         (sink_geom, dest_geom_id) = self.parameterAsSink(
             parameters, self.OUTPUT_GEOMETRIAS, context,
             campos_conflito, WKB_MULTIPOLYGON, layer_car.sourceCrs()
