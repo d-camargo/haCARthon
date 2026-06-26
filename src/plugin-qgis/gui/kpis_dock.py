@@ -65,6 +65,7 @@ class KpisDockWidget(QDockWidget):
         self._incra = None
         self._fila = None
         self._geom = None
+        self._muni = None
         self.init_gui()
 
     # ------------------------------------------------------------------ GUI
@@ -157,6 +158,7 @@ class KpisDockWidget(QDockWidget):
         if canonico and canonico != muni:
             muni = canonico
             self.muni_edit.setText(canonico)  # mostra a grafia corrigida
+        self._muni = muni
 
         QApplication.setOverrideCursor(WAIT_CURSOR)
         try:
@@ -165,9 +167,11 @@ class KpisDockWidget(QDockWidget):
                 "prevalcar:baixar_sicar",
                 {'UF': uf, 'MUNICIPIO': muni, 'OUTPUT': 'TEMPORARY_OUTPUT'})
             self._car = QgsProject.instance().mapLayer(r1['OUTPUT'])
-            if self._car is not None and self._car.featureCount() == 0:
-                self._status(f"Nenhum imóvel do CAR retornado para {muni}/{uf}. "
-                             f"Confira a grafia do município.", True)
+            if self._car is not None:
+                self._car.setName(f"Imóveis CAR - {muni}")
+                if self._car.featureCount() == 0:
+                    self._status(f"Nenhum imóvel do CAR retornado para {muni}/{uf}. "
+                                 f"Confira a grafia do município.", True)
 
             self._status(f"Baixando assentamentos do INCRA de {uf} e filtrando {muni}…")
             r2 = processing.runAndLoadResults(
@@ -224,6 +228,12 @@ class KpisDockWidget(QDockWidget):
             res = processing.runAndLoadResults("prevalcar:detectar_sobreposicao", params)
             self._fila = QgsProject.instance().mapLayer(res['OUTPUT_FILA'])
             self._geom = QgsProject.instance().mapLayer(res['OUTPUT_GEOMETRIAS'])
+
+            suf = f" - {self._muni}" if self._muni else ""
+            if self._fila is not None:
+                self._fila.setName(f"Fila Priorizada{suf}")
+            if self._geom is not None:
+                self._geom.setName(f"Geometrias de Conflito{suf}")
 
             # Estilo automático: conflitos em vermelho, fila graduada por risco.
             from ..estilos import estilo_conflitos, estilo_fila
