@@ -2,15 +2,19 @@
 """
 Carregamento das camadas do SICAR e do INCRA.
 
-Decisão (após teste): o provider WFS NATIVO do QGIS expirava (~60s) no endpoint i3geo do
-INCRA. Adotamos os caminhos comprovados no pipeline (`src/pipeline-ingestao/`):
-- SICAR : GET direto do GeoServer em GeoJSON (outputFormat=application/json) + CQL_FILTER.
-- INCRA : driver WFS do GDAL/OGR (prefixo "WFS:"), rápido e estável. O i3geo (MapServer
-          WFS 1.0.0) devolve lat,lon — o eixo é corrigido no algoritmo de download.
+Rede: usamos a pilha do PRÓPRIO QGIS (QgsBlockingNetworkRequest) e o GDAL/OGR, e NÃO o
+`urllib` do Python — o Python embarcado (ex.: Flatpak) pode falhar no handshake SSL com o
+GeoServer (SSLV3_ALERT_HANDSHAKE_FAILURE), enquanto a rede do QGIS respeita a config de
+SSL/proxy do aplicativo.
+
+- SICAR : GET do GeoServer em GeoJSON (QgsBlockingNetworkRequest; fallback GDAL /vsicurl/).
+- INCRA : driver WFS do GDAL/OGR (prefixo "WFS:"). O i3geo (MapServer WFS 1.0.0) devolve
+          lat,lon — o eixo é corrigido no algoritmo de download.
 """
-from qgis.core import QgsVectorLayer
+from qgis.core import QgsVectorLayer, QgsBlockingNetworkRequest
+from qgis.PyQt.QtCore import QUrl
+from qgis.PyQt.QtNetwork import QNetworkRequest
 import urllib.parse
-import urllib.request
 import tempfile
 from datetime import datetime
 
@@ -25,8 +29,15 @@ def _invalid(layer_name, msg):
     return layer
 
 
+def _layer_from_geojson_bytes(data, layer_name):
+    tmp = tempfile.NamedTemporaryFile(suffix='.geojson', delete=False)
+    tmp.write(data)
+    tmp.close()
+    return QgsVectorLayer(tmp.name, layer_name, "ogr")
+
+
 def load_sicar_layer(uf, municipio, layer_name=None):
-    """Imóveis do SICAR (GeoJSON via HTTP), filtrados por município (CQL_FILTER)."""
+    """Imóveis do SICAR (GeoJSON via rede do QGIS), filtrados por município (CQL_FILTER)."""
     if not layer_name:
         layer_name = f"CAR - {municipio} ({uf})"
 
@@ -38,23 +49,35 @@ def load_sicar_layer(uf, municipio, layer_name=None):
     }
     url = SICAR_WFS_BASE + '?' + urllib.parse.urlencode(params)
 
+    # 1) Pilha de rede do QGIS (respeita SSL/proxy do app)
+    erro_rede = None
     try:
-        req = urllib.request.Request(url, headers={'User-Agent': _UA})
-        with urllib.request.urlopen(req, timeout=180) as resp:
-            data = resp.read()
-        tmp = tempfile.NamedTemporaryFile(suffix='.geojson', delete=False)
-        tmp.write(data)
-        tmp.close()
-        layer = QgsVectorLayer(tmp.name, layer_name, "ogr")
+        request = QNetworkRequest(QUrl(url))
+        request.setRawHeader(b"User-Agent", _UA.encode("utf-8"))
+        blocking = QgsBlockingNetworkRequest()
+        blocking.get(request, True)
+        reply = blocking.reply()
+        data = bytes(reply.content())
+        if data:
+            layer = _layer_from_geojson_bytes(data, layer_name)
+            if layer.isValid():
+                layer.setCustomProperty("data_extracao", datetime.now().strftime("%Y-%m-%d"))
+                layer.setCustomProperty("fonte", "SICAR WFS (GeoJSON)")
+                return layer
+            erro_rede = "GeoJSON recebido, mas o GDAL não abriu a camada."
+        else:
+            erro_rede = reply.errorString() or "resposta vazia"
     except Exception as e:
-        return _invalid(layer_name, f"{type(e).__name__}: {e}")
+        erro_rede = f"{type(e).__name__}: {e}"
 
-    if not layer.isValid():
-        return _invalid(layer_name, "GeoJSON baixado, mas o GDAL não conseguiu abrir a camada.")
+    # 2) Fallback: GDAL/libcurl via /vsicurl/
+    layer = QgsVectorLayer(f"/vsicurl/{url}", layer_name, "ogr")
+    if layer.isValid():
+        layer.setCustomProperty("data_extracao", datetime.now().strftime("%Y-%m-%d"))
+        layer.setCustomProperty("fonte", "SICAR WFS (GeoJSON/vsicurl)")
+        return layer
 
-    layer.setCustomProperty("data_extracao", datetime.now().strftime("%Y-%m-%d"))
-    layer.setCustomProperty("fonte", "SICAR WFS (GeoJSON)")
-    return layer
+    return _invalid(layer_name, f"Falha de rede ao baixar o SICAR. {erro_rede or ''}".strip())
 
 
 def load_incra_layer(uf, layer_name=None):
