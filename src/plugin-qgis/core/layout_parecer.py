@@ -48,14 +48,14 @@ def _coloca(item, x, y, w, h, page=0):
     item.attemptMove(QgsLayoutPoint(x, y, MM), True, False, page)
 
 
-def _logo(layout, lado, y, page):
+def _logo(layout, lado, page, y=5, margin=5):
     if not os.path.exists(_ICON):
         return
     pic = QgsLayoutItemPicture(layout)
     pic.setPicturePath(_ICON)
     pic.setResizeMode(PIC_ZOOM)
     layout.addLayoutItem(pic)
-    _coloca(pic, (_PW - lado) / 2.0, y, lado, lado, page)  # centralizado
+    _coloca(pic, _PW - lado - margin, y, lado, lado, page)  # canto superior direito
 
 
 def _label(layout, texto, x, y, w, h, page, size, bold=False, color=(60, 60, 60), center=False, html=False):
@@ -84,23 +84,25 @@ def criar_layout_parecer(project, cobertura, map_layers, nome="Parecer Pré-Val 
         manager.removeLayout(antigo)
 
     layout = QgsPrintLayout(project)
-    layout.initializeDefaults()  # página 1 (A4 retrato)
+    layout.initializeDefaults()
     layout.setName(nome)
+    # Força A4 RETRATO nas duas páginas (não confiar no default do initializeDefaults).
+    layout.pageCollection().page(0).setPageSize('A4', PORTRAIT)
     pagina2 = QgsLayoutItemPage(layout)
     pagina2.setPageSize('A4', PORTRAIT)
     layout.pageCollection().addPage(pagina2)
 
     # ===================== PÁGINA 1: identificação + mapa =====================
-    _logo(layout, 60, 10, page=0)
+    _logo(layout, 60, page=0, y=5)
     _label(layout, "PARECER DE PRÉ-VALIDAÇÃO TÉCNICA — Pré-Val CAR",
-           10, 74, 190, 10, 0, size=14, bold=True, color=(44, 62, 80), center=True)
+           10, 22, 190, 10, 0, size=14, bold=True, color=(44, 62, 80), center=True)
     _label(layout, "Imóvel: [% cod_imovel %]   ·   Município: [% municipio %]   ·   "
                    "Score de risco: [% round(score, 1) %]",
-           10, 85, 190, 7, 0, size=10, color=(90, 90, 90), center=True)
+           10, 33, 190, 7, 0, size=10, color=(90, 90, 90), center=True)
 
     mapa = QgsLayoutItemMap(layout)
     layout.addLayoutItem(mapa)
-    _coloca(mapa, 10, 96, 190, 158, 0)
+    _coloca(mapa, 10, 44, 190, 210, 0)
     mapa.setFrameEnabled(True)
     if map_layers:
         mapa.setLayers(map_layers)
@@ -134,11 +136,11 @@ def criar_layout_parecer(project, cobertura, map_layers, nome="Parecer Pré-Val 
     _coloca(barra_num, 120, 272, 80, 6, 0)
 
     # ===================== PÁGINA 2: memória de cálculo =====================
-    _logo(layout, 40, 10, page=1)
+    _logo(layout, 50, page=1, y=5)
     _label(layout, "MEMÓRIA DE CÁLCULO",
-           10, 54, 190, 12, 1, size=18, bold=True, color=(44, 62, 80), center=True)
+           10, 24, 190, 12, 1, size=18, bold=True, color=(44, 62, 80), center=True)
     _label(layout, "[% parecer_html %]",
-           10, 70, 190, 215, 1, size=9, color=(51, 51, 51), html=True)
+           10, 42, 190, 245, 1, size=9, color=(51, 51, 51), html=True)
 
     # ===================== Atlas =====================
     atlas = layout.atlas()
