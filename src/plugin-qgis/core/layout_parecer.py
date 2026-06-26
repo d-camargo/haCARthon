@@ -7,7 +7,6 @@ parecer em HTML que flui para novas páginas quando há muitas sobreposições.
 import os
 from qgis.core import (Qgis, QgsPrintLayout, QgsLayoutItemMap, QgsLayoutItemLabel,
                        QgsLayoutItemLegend, QgsLayoutItemScaleBar, QgsLayoutItemPicture,
-                       QgsLayoutItemHtml, QgsLayoutFrame, QgsLayoutMultiFrame,
                        QgsLayoutPoint, QgsLayoutSize, QgsUnitTypes)
 from qgis.PyQt.QtGui import QFont, QColor
 
@@ -21,13 +20,9 @@ try:
 except AttributeError:
     MAP_AUTO = QgsLayoutItemMap.Auto
 try:
-    HTML_MANUAL = QgsLayoutItemHtml.ContentMode.ManualHtml
+    LABEL_HTML = QgsLayoutItemLabel.Mode.ModeHtml
 except AttributeError:
-    HTML_MANUAL = QgsLayoutItemHtml.ManualHtml
-try:
-    RESIZE_EXTEND = QgsLayoutMultiFrame.ResizeMode.ExtendToNextPage
-except AttributeError:
-    RESIZE_EXTEND = QgsLayoutMultiFrame.ExtendToNextPage
+    LABEL_HTML = QgsLayoutItemLabel.ModeHtml
 
 _ICON = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'icon.svg')
 
@@ -110,20 +105,12 @@ def criar_layout_parecer(project, cobertura, map_layers, nome="Parecer Pré-Val 
     layout.addLayoutItem(barra_num)
     _coloca(barra_num, 110, 133, 90, 6)
 
-    # --- Parecer (HTML que flui para novas páginas) ---
-    html = QgsLayoutItemHtml(layout)
-    layout.addMultiFrame(html)
-    html.setContentMode(HTML_MANUAL)
-    html.setEvaluateExpressions(True)
-    html.setHtml("[% parecer_html %]")
-    frame = QgsLayoutFrame(layout, html)
-    _coloca(frame, 10, 144, 190, 145)
-    html.addFrame(frame)
-    html.setResizeMode(RESIZE_EXTEND)
-    try:
-        html.loadHtml()
-    except Exception:
-        pass
+    # --- Parecer (rótulo HTML / Qt rich text — esta build não tem WebKit) ---
+    parecer = QgsLayoutItemLabel(layout)
+    parecer.setMode(LABEL_HTML)
+    parecer.setText("[% parecer_html %]")
+    layout.addLayoutItem(parecer)
+    _coloca(parecer, 10, 144, 190, 145)
 
     # --- Atlas: 1 página por imóvel em conflito, ordenado por score desc. ---
     atlas = layout.atlas()

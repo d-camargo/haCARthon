@@ -1,73 +1,73 @@
 # -*- coding: utf-8 -*-
 import json
 
+# Como o rótulo HTML (Qt rich text) não pagina, limitamos as linhas da tabela
+# e resumimos o excedente para o parecer caber na folha.
+_LIMITE_LINHAS = 12
+
+
 def formatar_memoria_html(json_str, cod_imovel, area_imovel_ha):
     """
-    Transforma a memória de cálculo JSON (gerada no momento da detecção) em um trecho HTML formatado.
-    Este HTML contém tabelas e formatação amigável para ser injetado diretamente em 
-    um componente 'HTML Frame' do Print Layout/Atlas do QGIS.
+    Transforma a memória de cálculo (JSON gerado na detecção) num HTML compacto,
+    adequado ao rótulo HTML do Print Layout (Qt rich text, sem WebKit).
     """
+    base_style = "font-family:Arial,sans-serif;font-size:9pt;color:#333;"
     if not json_str or json_str == '[]':
-        return "<p>Nenhuma sobreposição detectada na base de referência (dentro da tolerância).</p>"
-        
+        return (f"<div style='{base_style}'>Nenhuma sobreposição detectada na base de "
+                f"referência (dentro da tolerância).</div>")
     try:
         sobreposicoes = json.loads(json_str)
     except Exception as e:
-        return f"<p>Erro ao processar memória de cálculo: {e}</p>"
-        
-    html = []
-    
-    # Cabeçalho da memória de cálculo
-    html.append(f"<h3 style='color: #2c3e50; border-bottom: 1px solid #ddd;'>Memória de Cálculo - Divergências de Geometria</h3>")
-    html.append(f"<p><b>Imóvel Analisado:</b> {cod_imovel}<br>")
-    html.append(f"<b>Área Total Declarada:</b> {area_imovel_ha:.2f} ha</p>")
-    
-    # Tabela de detalhamento
-    html.append("<table style='width:100%; border-collapse: collapse; margin-top: 10px; font-family: Arial, sans-serif;'>")
-    html.append("<tr style='background-color: #f2f2f2;'>")
-    html.append("<th style='border: 1px solid #aaa; padding: 8px; text-align: left;'>Tipo do Conflito</th>")
-    html.append("<th style='border: 1px solid #aaa; padding: 8px; text-align: left;'>Objeto Conflitante</th>")
-    html.append("<th style='border: 1px solid #aaa; padding: 8px; text-align: right;'>Área (ha)</th>")
-    html.append("<th style='border: 1px solid #aaa; padding: 8px; text-align: right;'>Comprometimento</th>")
-    html.append("</tr>")
-    
-    total_area_sobreposta = 0.0
-    tem_assentamento = False
-    
-    for s in sobreposicoes:
-        area_conflito = s.get('sobrep_ha', 0)
-        total_area_sobreposta += area_conflito
-        pct = s.get('pct_imovel', 0)
-        tipo = s.get('tipo', '')
-        contra = s.get('contra', '')
-        
-        if tipo == 'CARxAssentamento':
-            tem_assentamento = True
-            
-        # Cor de destaque se a % for grande
-        color = "color: #e74c3c; font-weight: bold;" if pct > 10 else "color: #333;"
-            
-        html.append("<tr>")
-        html.append(f"<td style='border: 1px solid #aaa; padding: 8px;'>{tipo}</td>")
-        html.append(f"<td style='border: 1px solid #aaa; padding: 8px;'>{contra}</td>")
-        html.append(f"<td style='border: 1px solid #aaa; padding: 8px; text-align: right;'>{area_conflito:.3f}</td>")
-        html.append(f"<td style='border: 1px solid #aaa; padding: 8px; text-align: right; {color}'>{pct:.1f}%</td>")
-        html.append("</tr>")
-        
-    html.append("</table>")
-    
-    # Seção de Enquadramento Legal e Recomendação baseada no Código Florestal / Normas
-    html.append("<h3 style='color: #2c3e50; border-bottom: 1px solid #ddd; margin-top: 20px;'>Enquadramento e Recomendação Preliminar</h3>")
-    html.append("<div style='background-color: #fdfaf6; border-left: 4px solid #e67e22; padding: 10px; margin-top: 10px;'>")
-    
+        return f"<div style='{base_style}'>Erro ao processar a memória de cálculo: {e}</div>"
+
+    sobreposicoes.sort(key=lambda s: (s.get('sobrep_ha', 0) or 0), reverse=True)
+    total_area = sum((s.get('sobrep_ha', 0) or 0) for s in sobreposicoes)
+    tem_assentamento = any(s.get('tipo') == 'CARxAssentamento' for s in sobreposicoes)
+    visiveis = sobreposicoes[:_LIMITE_LINHAS]
+    extras = sobreposicoes[_LIMITE_LINHAS:]
+
+    td = "border:1px solid #bbb;padding:3px;"
+    h = [f"<div style='{base_style}'>"]
+    h.append("<b style='font-size:10pt;color:#2c3e50;'>Memória de cálculo — divergências de geometria</b>")
+    h.append(f"<p style='margin:2px 0;'>Imóvel <b>{cod_imovel}</b> · área declarada "
+             f"{area_imovel_ha:.2f} ha · {len(sobreposicoes)} sobreposição(ões) · "
+             f"total {total_area:.2f} ha</p>")
+
+    h.append("<table style='width:100%;border-collapse:collapse;font-size:8.5pt;'>")
+    h.append(f"<tr style='background:#f0f0f0;'>"
+             f"<td style='{td}'><b>Tipo</b></td>"
+             f"<td style='{td}'><b>Conflitante</b></td>"
+             f"<td style='{td}text-align:right;'><b>Área (ha)</b></td>"
+             f"<td style='{td}text-align:right;'><b>% imóvel</b></td></tr>")
+    for s in visiveis:
+        pct = s.get('pct_imovel', 0) or 0
+        cor = "color:#c0392b;font-weight:bold;" if pct > 10 else ""
+        h.append("<tr>"
+                 f"<td style='{td}'>{s.get('tipo', '')}</td>"
+                 f"<td style='{td}'>{s.get('contra', '')}</td>"
+                 f"<td style='{td}text-align:right;'>{(s.get('sobrep_ha', 0) or 0):.3f}</td>"
+                 f"<td style='{td}text-align:right;{cor}'>{pct:.1f}%</td></tr>")
+    if extras:
+        area_extra = sum((e.get('sobrep_ha', 0) or 0) for e in extras)
+        h.append(f"<tr><td colspan='4' style='{td}font-style:italic;color:#666;'>"
+                 f"… e mais {len(extras)} sobreposição(ões), somando {area_extra:.2f} ha.</td></tr>")
+    h.append("</table>")
+
+    h.append("<p style='margin-top:6px;'><b style='color:#2c3e50;'>Enquadramento e recomendação preliminar</b></p>")
+    h.append("<div style='background:#fdfaf6;border:1px solid #e0c0a0;padding:6px;'>")
     if tem_assentamento:
-        html.append("<p style='color: #c0392b;'><b>ALERTA GRAVE:</b> Constatada sobreposição com perímetro de Assentamento da Reforma Agrária (INCRA).</p>")
-        html.append("<p><b>Ação Recomendada:</b><br>1. Bloqueio cautelar do processamento automático.<br>2. Notificar imediatamente o proprietário declarante e encaminhar o caso para a câmara de conciliação fundiária competente.</p>")
-    elif total_area_sobreposta > 0:
-        html.append("<p><b>Divergência de Divisas:</b> Sobreposição com polígonos de imóveis rurais de terceiros confirmada (CAR x CAR).</p>")
-        html.append("<p><b>Ação Recomendada:</b><br>1. Reter a análise de conformidade.<br>2. Proceder com a etapa de <i>Retificação Dinamizada</i>, notificando os respectivos declarantes para adequação e acordo do traçado geométrico, conforme prevê a regulação do SICAR.</p>")
-        
-    html.append("</div>")
-    html.append("<br><br><p style='font-size: 8pt; color: #7f8c8d; text-align: right;'><i>Parecer pré-gerado pelo Módulo Analítico 'Pré-Val CAR' — Sujeito à homologação técnica.</i></p>")
-    
-    return "".join(html)
+        h.append("<p style='color:#c0392b;margin:2px 0;'><b>ALERTA:</b> sobreposição com perímetro "
+                 "de Assentamento da Reforma Agrária (INCRA).</p>")
+        h.append("<p style='margin:2px 0;'>Recomenda-se bloqueio cautelar da análise automática, "
+                 "notificação ao declarante e encaminhamento à câmara de conciliação fundiária.</p>")
+    else:
+        h.append("<p style='margin:2px 0;'><b>Divergência de divisas (CAR × CAR):</b> sobreposição "
+                 "com imóveis rurais de terceiros.</p>")
+        h.append("<p style='margin:2px 0;'>Recomenda-se reter a análise de conformidade e proceder à "
+                 "Retificação Dinamizada, notificando os declarantes para ajuste do traçado, conforme "
+                 "a regulação do SICAR.</p>")
+    h.append("</div>")
+    h.append("<p style='font-size:7.5pt;color:#888;text-align:right;margin-top:4px;'>"
+             "<i>Parecer pré-gerado pelo módulo Pré-Val CAR — sujeito a homologação técnica.</i></p>")
+    h.append("</div>")
+    return "".join(h)
