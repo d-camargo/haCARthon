@@ -6,6 +6,16 @@ calorosas, exemplos concretos, zero juridiquês. O assistente ORIENTA, não exec
 """
 import unicodedata
 
+
+def _n(x) -> str:
+    """Número em PT-BR (vírgula decimal), sem zeros à toa: 89.6 -> '89,6'."""
+    try:
+        s = f"{float(x):.1f}".rstrip("0").rstrip(".")
+        return s.replace(".", ",")
+    except (TypeError, ValueError):
+        return str(x)
+
+
 SAUDACAO = (
     "Boa tarde, Seu Raimundo! 🌱 Eu sou o *Terra em Dia*.\n"
     "Pode tirar suas dúvidas do CAR aqui mesmo, no Zap.\n\n"
@@ -17,34 +27,53 @@ RECEBI_FOTO = "Recebi a sua carta, obrigado! 📄 Já tô puxando aqui o seu cad
 
 VENDO_CADASTRO = "Achei seu sítio ✅ Deixa eu te mandar o mapa dele..."
 
+CAPTION_ATUAL = "📍 O seu sítio hoje"
+CAPTION_META = "🌳 Assim a beira do rio deve ficar: coberta de mato"
 
-def explicacao(an: dict) -> str:
-    """Explica APP (mata ciliar) e Reserva Legal com os números reais do imóvel."""
-    txt = (
-        f"Esse é o seu sítio em *{an['municipio']}/{an['uf']}* — são "
-        f"*{an['area_ha']} hectares* 👆\n\nVou te explicar com calma o que a "
-        "lei pede aí na sua terra:\n\n"
+
+def intro_sitio(an: dict) -> str:
+    return (
+        f"Esse é o seu sítio em *{an['municipio']}/{an['uf']}* — "
+        f"*{_n(an['area_ha'])} hectares*. 👆"
     )
-    if an["tem_app"]:
-        txt += (
-            "🔵 *Mata ciliar* (a faixa azul, na beira do rio): a lei pede "
-            f"*{an['faixa_app_m']} passos* de mato de cada lado, porque o seu rio "
-            f"tem {an['rio_largura']}. Dá uns *{an['campos_futebol']} campos de "
-            "futebol* de faixa pra cuidar. Esse mato segura o barranco e protege "
-            "a sua água 💧.\n\n"
+
+
+PERGUNTA_MOTIVO = (
+    "Deixa eu te perguntar antes: você sabe *por que* recebeu essa carta? 🤔\n"
+    "(pode chutar, sem medo)"
+)
+
+_MOTIVO_OK = ["mata", "ciliar", "reserva", "app", "ambient", "floresta", "rio",
+              "arvore", "árvore", "verde", "lei"]
+
+
+def reage_motivo(resposta: str) -> str:
+    t = _normaliza(resposta)
+    if any(p in t for p in _MOTIVO_OK):
+        return "Isso, é bem por aí! 👏 Deixa eu te mostrar direitinho:"
+    return "Tranquilo, é pra isso que eu tô aqui 🙂 Olha só:"
+
+
+def explica_mata(an: dict) -> str:
+    return (
+        "A carta fala da *mata ciliar* 🌿 — a faixa de mato na beira do rio.\n"
+        f"A lei pede *{an['faixa_app_m']} passos* de mato de cada lado, "
+        f"porque o seu rio tem {an['rio_largura']}. É essa faixa do mapa 👇"
+    )
+
+
+def sugestao_rl(an: dict) -> str | None:
+    if not an["tem_rl"]:
+        return None
+    if an["rl_deficit_ha"] > 0:
+        return (
+            f"Tem também a *Reserva Legal* 🌳: a lei pede uns *{_n(an['rl_exigida_ha'])} ha* "
+            f"e hoje a sua tem *{_n(an['rl_proposta_ha'])} ha*.\n"
+            f"Faltam uns *{_n(an['rl_deficit_ha'])} ha* — dá pra *ampliar a reserva que "
+            "você já tem* ou *juntar com a mata do rio*, formando um corredor. "
+            "A gente acha o melhor lugar com calma. 😉"
         )
-    if an["tem_rl"]:
-        txt += (
-            "🟢 *Reserva Legal* (a área verde): a lei pede *"
-            f"{an['rl_exigida_pct']}%* do sítio guardado com mato — uns "
-            f"*{an['rl_exigida_ha']} hectares*. Hoje a sua reserva proposta tem "
-            f"*{an['rl_proposta_ha']} ha*"
-        )
-        if an["rl_deficit_ha"] > 0:
-            txt += f", então *falta uns {an['rl_deficit_ha']} ha* pra completar.\n\n"
-        else:
-            txt += ", e já está completa 👏.\n\n"
-    return txt.strip()
+    return f"Sua *Reserva Legal* já está completinha (~{_n(an['rl_proposta_ha'])} ha) 👏."
 
 
 PERGUNTA_COMPREENSAO = (
@@ -69,7 +98,7 @@ REEXPLICA = (
 def guia_acao(an: dict) -> str:
     falta_rl = an["tem_rl"] and an["rl_deficit_ha"] > 0
     extra = (
-        f"\n• Completar uns *{an['rl_deficit_ha']} ha* de mato na Reserva Legal"
+        f"\n• Completar uns *{_n(an['rl_deficit_ha'])} ha* de mato na Reserva Legal"
         if falta_rl else ""
     )
     return (

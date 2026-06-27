@@ -1,13 +1,13 @@
 """Terra em Dia — bot de Telegram (protótipo do Desafio 3 do haCARthon).
 
-O produtor chama no "Zap", manda o número do CAR; o bot consulta os dados reais
-do imóvel, **manda um mapa com as feições** (perímetro, mata ciliar, Reserva
-Legal), **explica em linguagem simples** (LLM, com fallback roteirizado), faz
-uma **pergunta despretensiosa** pra medir compreensão e o **guia até o SICAR**.
+Conversa: o produtor manda o número do CAR; o bot mostra o mapa do imóvel,
+pergunta se ele sabe por que recebeu a carta, explica a mata ciliar em balões
+curtos, manda um 2º mapa de "como deve ficar", sugere o caminho da Reserva
+Legal, mede a compreensão e o guia até o SICAR.
 
 Rodar:
-    pip install -r requirements.txt
-    cp .env.example .env        # preencha TELEGRAM_TOKEN e (opcional) OPENAI_API_KEY
+    pip install -r requirements.txt          (venv com --system-site-packages p/ osgeo)
+    cp .env.example .env                      (TELEGRAM_TOKEN, OPENAI_API_KEY, TERRA_DEMO_COD)
     python bot.py
 """
 import logging
@@ -44,20 +44,38 @@ logging.basicConfig(
 )
 logger = logging.getLogger("terra-em-dia")
 
-AGUARDA_CAR, AGUARDA_COMPREENSAO, CONVERSA = range(3)
+AGUARDA_CAR, AGUARDA_MOTIVO, AGUARDA_COMPREENSAO, CONVERSA = range(4)
 MD = "Markdown"
-DEMO_COD = os.environ.get("TERRA_DEMO_COD")  # cod_imovel de demonstração (.env)
+DEMO_COD = os.environ.get("TERRA_DEMO_COD")
 
 
 def _resolver(texto: str):
-    """Retorna (cod, imovel). Usa o cod digitado se existir; senão o de demo."""
     cod = (texto or "").strip()
     im = cadastro.carregar_imovel(cod) if len(cod) >= 5 else None
     if im:
-        return cod, im
+        return im
     if DEMO_COD:
-        return DEMO_COD, cadastro.carregar_imovel(DEMO_COD)
-    return cod, None
+        return cadastro.carregar_imovel(DEMO_COD)
+    return None
+
+
+async def _enviar_mapa(update, imovel, modo, caption):
+    await update.message.chat.send_action(ChatAction.UPLOAD_PHOTO)
+    tmp_nome = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp_nome = tmp.name
+        mapa.gerar_mapa(imovel, tmp_nome, modo=modo)
+        with open(tmp_nome, "rb") as fp:
+            await update.message.reply_photo(photo=fp, caption=caption)
+    except Exception as e:  # mapa é um plus; não derruba a conversa
+        logger.warning("falha ao gerar mapa (%s): %s", modo, e)
+    finally:
+        if tmp_nome:
+            try:
+                os.unlink(tmp_nome)
+            except OSError:
+                pass
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -68,13 +86,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def recebeu_foto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(conteudo.RECEBI_FOTO)
-    _, im = _resolver(DEMO_COD or "")
-    return await _apresentar(update, context, im)
+    return await _apresentar(update, context, _resolver(DEMO_COD or ""))
 
 
 async def recebeu_car(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    _, im = _resolver(update.message.text)
-    return await _apresentar(update, context, im)
+    return await _apresentar(update, context, _resolver(update.message.text))
 
 
 async def _apresentar(update, context, imovel) -> int:
@@ -83,29 +99,24 @@ async def _apresentar(update, context, imovel) -> int:
         return AGUARDA_CAR
 
     an = analise.analisar(imovel)
-    context.user_data["an"] = an
-    context.user_data["historico"] = []
-    context.user_data["tentativas"] = 0
+    context.user_data.update(imovel=imovel, an=an, historico=[], tentativas=0)
 
     await update.message.reply_text(conteudo.VENDO_CADASTRO)
-    await update.message.chat.send_action(ChatAction.UPLOAD_PHOTO)
-    try:
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            mapa.gerar_mapa(imovel, tmp.name)
-        with open(tmp.name, "rb") as fp:
-            await update.message.reply_photo(photo=fp, caption="📍 O seu sítio no mapa")
-    except Exception as e:  # mapa é um plus; não derruba a conversa
-        logger.warning("falha ao gerar mapa: %s", e)
-    finally:
-        if "tmp" in dir():
-            try:
-                os.unlink(tmp.name)
-            except OSError:
-                pass
+    await _enviar_mapa(update, imovel, "atual", conteudo.CAPTION_ATUAL)
+    await update.message.reply_text(conteudo.intro_sitio(an), parse_mode=MD)
+    await update.message.reply_text(conteudo.PERGUNTA_MOTIVO, parse_mode=MD)
+    return AGUARDA_MOTIVO
 
-    await update.message.chat.send_action(ChatAction.TYPING)
-    explicacao = llm.explicar(an) or conteudo.explicacao(an)
-    await update.message.reply_text(explicacao, parse_mode=MD)
+
+async def apos_motivo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    imovel = context.user_data.get("imovel")
+    an = context.user_data.get("an", {})
+    await update.message.reply_text(conteudo.reage_motivo(update.message.text))
+    await update.message.reply_text(conteudo.explica_mata(an), parse_mode=MD)
+    await _enviar_mapa(update, imovel, "meta", conteudo.CAPTION_META)
+    sugestao = conteudo.sugestao_rl(an)
+    if sugestao:
+        await update.message.reply_text(sugestao, parse_mode=MD)
     await update.message.reply_text(conteudo.PERGUNTA_COMPREENSAO, parse_mode=MD)
     return AGUARDA_COMPREENSAO
 
@@ -135,13 +146,10 @@ async def conversa_livre(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     hist = context.user_data.setdefault("historico", [])
     hist.append({"role": "user", "content": update.message.text})
     await update.message.chat.send_action(ChatAction.TYPING)
-    resp = llm.conversar(hist, an)
-    if not resp:
-        resp = (
-            "Boa pergunta! Pra essa eu prefiro te orientar com calma — chama a "
-            "Casa da Agricultura ou um técnico de confiança, e me diga que eu te "
-            "ajudo a entender. 🌱"
-        )
+    resp = llm.conversar(hist, an) or (
+        "Boa pergunta! Pra essa eu prefiro te orientar com calma — chama a Casa "
+        "da Agricultura ou um técnico de confiança que eu te ajudo a entender. 🌱"
+    )
     hist.append({"role": "assistant", "content": resp})
     await update.message.reply_text(resp, parse_mode=MD)
     return CONVERSA
@@ -175,6 +183,7 @@ def main() -> None:
         states={
             AGUARDA_CAR: [MessageHandler(filters.PHOTO, recebeu_foto),
                           MessageHandler(texto, recebeu_car)],
+            AGUARDA_MOTIVO: [MessageHandler(texto, apos_motivo)],
             AGUARDA_COMPREENSAO: [MessageHandler(texto, avalia_compreensao)],
             CONVERSA: [MessageHandler(texto, conversa_livre)],
         },
