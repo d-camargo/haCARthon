@@ -1,2 +1,5 @@
 python-telegram-bot>=21,<22
 python-dotenv>=1.0
+openai>=1.40
+matplotlib>=3.7
+# osgeo (GDAL) vem do sistema (não via pip). Confirme: python -c "from osgeo import ogr"
