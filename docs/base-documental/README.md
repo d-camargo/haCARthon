@@ -36,9 +36,12 @@ docs/base-documental/
 | Arquivo | O que contém | Quando usar |
 |---|---|---|
 | `Edital haCARthon - Assinado - SEI_0993344_Edital_158.pdf` | Edital oficial ENAP nº 158/2026 — regras da maratona | Conferir regras, prazos e critérios de avaliação |
-| `esperado.md` | Enunciado oficial dos 3 desafios e soluções esperadas | Escopo e aderência ao Desafio 2 |
+| `haCARthon - Briefing dos desafios - versão 2.pdf` | **Briefing oficial dos desafios (v2, 16 págs)** — contexto, os 3 desafios detalhados, **personas oficiais (Seu Raimundo, Luana)** e exemplos de soluções | Fonte oficial da persona e do enunciado do desafio |
+| `esperado.md` | Enunciado oficial dos 3 desafios e soluções esperadas (extrato do briefing) | Escopo e aderência ao desafio escolhido (atual: **D3**) |
 | `Resumo_haCARthon_Ideacao_Prototipacao.md` | Metodologia (Duplo Diamante), personas, formato de entrega | Conduzir ideação/prototipação |
 | `pitch.md` | Resumo da Live 04 — como construir o pitch (estrutura, slides, gravação) | Montar o pitch e o vídeo |
+| `Live_05_orientacoes-entrega-tiraduvidas.md` | Transcrição da Live 05 — orientações de entrega (ideação/protótipo/pitch), prazos e tira-dúvidas | Conferir regras de entrega e validações da coordenação |
+| `Live_06_tiraduvidas-desafios.md` | Transcrição da Live 06 — tira-dúvidas exclusivo dos desafios (com a coordenação do CAR) | Validações de escopo do D3 (IA p/ legislação, aceite no SICAR, etc.) |
 | `Identificacao_oportunidades.pdf` | Guia de identificação de oportunidades (imersão, jornada, JTBD) | Descobrir e enquadrar o problema |
 | `ideacao_prototipacao.pdf` | Slides de ideação e prototipação (versão completa) | Apoiar a ideação |
 | `ideacao_prototipacao_compressed.pdf` | Mesma apresentação, versão leve | Leitura rápida |
@@ -48,7 +51,7 @@ docs/base-documental/
 
 | Arquivo | O que contém | Quando usar |
 |---|---|---|
-| `Onde-Estamos-2025.pdf` | CPI/PUC-Rio — "Onde Estamos na Implementação do Código Florestal? Radiografia do CAR e do PRA nos Estados, Ed. 2025". Dados de inscrição/análise por estado (nov/2025) | Dimensionar o problema, fundamentar o pitch (ver `briefing.md` seção 2.1) |
+| `Onde-Estamos-2025.pdf` | CPI/PUC-Rio — "Onde Estamos na Implementação do Código Florestal? Radiografia do CAR e do PRA nos Estados, Ed. 2025". Dados de inscrição/análise por estado (nov/2025) | Dimensionar o problema, fundamentar o pitch (ver `desafio-2/docs/briefing.md` seção 2.1) |
 | `LEG-Consultada-OE-2025.pdf` | Apêndice "Legislação Consultada" do estudo acima | Rastrear a legislação estadual consultada |
 
 ## ecossistema/ — Sistemas do CAR e acesso ao ambiente de testes
@@ -56,9 +59,11 @@ docs/base-documental/
 | Arquivo | O que contém | Quando usar |
 |---|---|---|
 | `CAR DPG - Sistemas, plataformas e repositórios do CAR_V4.docx.pdf` | Lista de sistemas/plataformas/repositórios do CAR | Mapear ecossistema, evitar retrabalho |
+| `Meu-Imovel-Rural.md` | Transcrição do vídeo oficial do **Meu Imóvel Rural** (cruza CAR+SNCR+SIGEF, painel "Tô em Dia") | **Evidência do diferencial do D3**: as ferramentas oficiais traduzem a checklist de crédito, não as obrigações ambientais por feição |
 | `Acesso ao Módulo de Cadastro Pré- Preenchido.pdf` | Credenciais e acesso ao ambiente de testes | Acessar ambiente de testes ⚠️ ver segurança |
 
 > ⚠️ O PDF de **acesso** contém credenciais do ambiente de testes — **não** copiar CPFs/SNCR/senhas
 > para arquivos versionados. Manter segredos apenas no `.env` local.
 
-> Briefing oficial dos desafios (online): https://repositorio.enap.gov.br/bitstream/1/9909/5/haCARthon%20-%20Briefing%20dos%20desafios%20-%20vers%c3%a3o%202.pdf
+> Briefing oficial dos desafios: arquivo local em `metodologia/haCARthon - Briefing dos desafios - versão 2.pdf`
+> (online: https://repositorio.enap.gov.br/bitstream/1/9909/5/haCARthon%20-%20Briefing%20dos%20desafios%20-%20vers%c3%a3o%202.pdf)
