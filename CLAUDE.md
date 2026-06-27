@@ -124,11 +124,14 @@ Destaques para o D3:
 
 ## Stack deste projeto
 
-> Entrega **protótipo-first**. Preencher conforme decidir.
-- **Tipo de entrega:** mockup/protótipo de conversa + vídeo (código opcional).
-- **Protótipo:** _(a definir — ex.: telas de chat em Figma/HTML; simulação de WhatsApp)_.
-- **Lógica de tradução (se houver demo):** regras do Código Florestal (APP/RL) + LLM **agnóstica de modelo** para gerar a explicação personalizada.
-- **Motor de cálculo (opcional, reaproveitável):** lógica declarado × referência do `desafio-2/` (PostGIS/QGIS) como "cérebro".
+> Entrega **protótipo funcional** (bot de Telegram) + vídeo + pitch.
+- **Tipo de entrega:** **bot de Telegram funcional** (`src/terra-em-dia-bot/`) + vídeo de 2 min + pitch.
+- **Linguagem/runtime:** **Python 3.12**.
+- **Lib:** **`python-telegram-bot`** (v21+, async). Token via `.env` (**nunca** versionar).
+- **Fluxo da conversa:** **roteirizado/determinístico** (sem chave de API, reprodutível e open source). **Hook de LLM** opcional como upgrade — **agnóstico de modelo**.
+- **Dados do imóvel:** exemplo real **anonimizado** de Querência do Norte/PR, lido localmente (`src/.../imoveis.py`), **simulando** a leitura por API do CAR. cod_imovel real só em `data/` (gitignored).
+- **Métrica:** registro de compreensão (sim/não) em arquivo local gitignored → KPI "% que entendeu".
+- **Motor de cálculo (opcional, reaproveitável):** lógica declarado × referência do `desafio-2/` (PostGIS/QGIS) como "cérebro" para os números por feição.
 
 ## Estrutura do repositório
 ```
