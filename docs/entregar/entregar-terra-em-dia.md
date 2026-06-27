@@ -21,17 +21,18 @@
 
 ## Storyboard — "A carta do Seu Raimundo" (vídeo ~2 min)
 
-Conversa de WhatsApp ("Zap"). Voz em off + balões na tela. Imóvel real anonimizado de **Querência do Norte/PR** (~3 módulos; mata ciliar ~2 ha).
+**Gravação de tela do bot real no Telegram** (a conversa de verdade, com os **2 mapas**). Imóvel real anonimizado de **Querência do Norte/PR** (~3 módulos; 89,6 ha; mata ciliar ~2 ha; déficit de RL ~9,6 ha). Cenas 0–1 são abertura em off; **2–7 são a tela do bot**.
 
 | Cena | Tempo | Visual | Conteúdo |
 |---|---|---|---|
-| **0. A carta** | 0:00–0:15 | Raimundo na varanda com um **papel** na mão (notificação dos Correios), cara de dúvida | Off: *"Seu Raimundo recebeu uma carta sobre o CAR. Não entendeu o que era pra fazer — e ficou com medo de perder a terra."* |
-| **1. A Casa da Agricultura** | 0:15–0:30 | Fachada simples "**Casa da Agricultura**" (prefeitura — fictício); um técnico aponta o celular | Off: *"Foi até a Casa da Agricultura da prefeitura. Lá disseram: 'isso você tira no Zap, com o Terra em Dia'."* |
-| **2. O primeiro oi** | 0:30–0:45 | Tela do WhatsApp abrindo | **Raimundo:** "Boa tarde! Recebi essa carta aqui do CAR 📄 e não entendi nada. Pode me ajudar?" (envia **foto da carta**) · **Terra em Dia:** "Boa tarde, Seu Raimundo! 🌱 Posso sim. Me confirma o número do seu CAR (tá na carta) que eu já vejo o seu sítio." |
-| **3. Educa (na terra dele)** | 0:45–1:15 | Mapa simples do sítio com a **faixa do rio destacada** | **Terra em Dia:** "Achei seu sítio em Querência do Norte ✅. A carta fala da **mata ciliar** — aquela faixa de mato na beira do rio. A lei pede **30 passos (30 m)** de mato de cada lado, porque o seu rio é estreito. Hoje você tem cerca de **2 campos de futebol** dessa faixa pra cuidar. Ela segura o barranco e protege a sua água 💧." |
-| **4. Conversa pra ver se entendeu** | 1:15–1:40 | Balões normais (sem "quiz") | **Terra em Dia:** "Deixa eu te perguntar uma coisa, Seu Raimundo, só pra eu saber se expliquei direito 😅: por que será que a lei pede pra deixar esse mato na beira do rio?" · **Raimundo:** "Ah… pra água não secar e o barranco não cair, né?" · **Terra em Dia:** "É isso aí! 👏 Entendeu certinho." |
-| **5. Guia a ação** | 1:40–2:00 | Print do SICAR com o botão destacado | **Terra em Dia:** "Agora o caminho: confirmar essa faixa no sistema e cuidar do que faltar de mato. Eu te mostro o passo a passo 📋. No fim, **só você aperta o botão no SICAR** — é rapidinho. Resolvido isso, você destrava o **crédito rural** 💰. Quer que eu te acompanhe?" |
-| **6. Fecho** | 2:00–2:10 | Raimundo aliviado, sorrindo pro celular | Off + tagline: *"Sem juridiquês. Sem advogado. No canal que ele já confia. **Terra em Dia — o Código Florestal explicado pra sua terra.**"* |
+| **0. A carta** | 0:00–0:12 | Raimundo na varanda com um **papel** na mão (notificação dos Correios), cara de dúvida | Off: *"Seu Raimundo recebeu uma carta sobre o CAR. Não entendeu o que era pra fazer — e ficou com medo de perder a terra."* |
+| **1. A Casa da Agricultura** | 0:12–0:25 | Fachada "**Casa da Agricultura**" (prefeitura — fictício); técnico aponta o celular | Off: *"Foi à Casa da Agricultura da prefeitura. Lá disseram: 'isso você tira no Zap, com o Terra em Dia'."* |
+| **2. O primeiro oi** | 0:25–0:40 | Tela do Telegram | **Raimundo:** "Boa tarde! Recebi essa carta do CAR 📄 e não entendi nada." (manda o **número do CAR**) · **Terra em Dia:** "Achei seu sítio ✅ Deixa eu te mandar o mapa dele..." |
+| **3. O mapa + o porquê** | 0:40–1:05 | **Mapa atual** do sítio (perímetro + mata ciliar azul + RL) | **Terra em Dia:** "Esse é o seu sítio em *Querência do Norte/PR* — *89,6 hectares* 👆. Deixa eu te perguntar antes: você sabe *por que* recebeu essa carta? 🤔" · **Raimundo:** "Sei lá, não entendi direito…" |
+| **4. Educa + como deve ficar** | 1:05–1:35 | **2º mapa "como deve ficar"** (mata ciliar em verde) | **Terra em Dia:** "Tranquilo 🙂 A carta fala da *mata ciliar* — a faixa de mato na beira do rio. A lei pede *30 passos* de cada lado. É essa faixa 👇" · *(manda o mapa-meta)* · "Tem também a *Reserva Legal*: faltam uns *9,6 ha* — dá pra ampliar a sua ou formar um corredor com a mata do rio. 😉" |
+| **5. Confere se entendeu** | 1:35–1:55 | Balões normais | **Terra em Dia:** "Só pra eu saber se expliquei direito 😅: por que será que a lei pede esse mato na beira do rio?" · **Raimundo:** "Pra água não secar e o barranco não cair, né?" · **Terra em Dia:** "É isso aí! 👏" |
+| **6. Guia a ação** | 1:55–2:10 | Print do SICAR com o botão | **Terra em Dia:** "Agora é confirmar no SICAR e cuidar do que faltar de mato 📋. No fim, *só você aperta o botão* — ninguém faz por você. Aí você entra na fila do *crédito rural* 💰." |
+| **7. Fecho** | 2:10–2:20 | Raimundo aliviado, sorrindo pro celular | Off + tagline: *"Sem juridiquês. Sem advogado. No canal que ele já confia. **Terra em Dia — o Código Florestal explicado pra sua terra.**"* |
 
 ### Métrica de eficácia — "educação que se mede"
 A checagem **não é um teste**: é uma **pergunta despretensiosa** ("por que você acha que a lei pede esse mato?"). O bot infere pela resposta se o produtor **demonstrou entender** e registra (sim/não). Isso vira um **KPI**:
@@ -48,6 +49,6 @@ A checagem **não é um teste**: é uma **pergunta despretensiosa** ("por que vo
 - **Antes/depois:** usar o mapa real do imóvel (geometria do `data/`), anonimizado.
 
 ## Próximos passos da entrega (até domingo 28/06, 23:59)
-1. **Telas do protótipo** (mockup do WhatsApp) a partir deste storyboard — ferramenta a definir (Figma/HTML).
-2. **Roteiro de ideação** (respostas às perguntas oficiais) — puxar de Descobrir→Entregar.
+1. **Gravar a tela do bot real** (Telegram) usando este storyboard como roteiro de demonstração — é protótipo **funcional**, não mockup.
+2. **Ideação** (respostas às perguntas oficiais) — puxar do Duplo Diamante (`docs/descobrir|definir|desenvolver|entregar`).
 3. **Pitch** (slides + voz, 3 min) — problema, buraco, solução, diferencial, impacto.

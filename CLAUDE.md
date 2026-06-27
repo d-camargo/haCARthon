@@ -43,11 +43,14 @@ Atende proprietários para explicar notificações e legislação (confirmado na
 
 ## A solução: "Terra em Dia"
 
-Assistente **conversacional** (mensageria, multicanal) que, a partir do **número do CAR** do imóvel (consulta de **leitura** — a interface oficial já lê os dados "via API", confirmado nos prints do vídeo do Meu Imóvel Rural), conduz o Raimundo por **três momentos**:
+Assistente **conversacional** (Telegram no protótipo; multicanal por princípio) que, a partir do **número do CAR**, consulta os **dados reais** do imóvel e conduz o Raimundo por uma conversa de **balões curtos**:
 
-1. **Educa** — explica, em linguagem simples e **personalizada pelo imóvel dele**, o que o Código Florestal exige naquela terra (APP de curso d'água/nascente, déficit de Reserva Legal, área a recompor), com o **porquê** dimensional e o **benefício** (crédito/PRA).
-2. **Testa o entendimento** — faz perguntas curtas para confirmar que o Raimundo entendeu **antes** de deixá-lo agir (ataca o medo de errar). É o **diferencial pedagógico**.
-3. **Execução assistida** — guia o passo a passo e **termina no botão do SICAR** (ou gera o arquivo que ele sobe). **Não executa por ele** — o aceite/retificação só vale dentro do SICAR (Live 06).
+1. **Mostra o mapa do imóvel** (perímetro + mata ciliar + Reserva Legal) e pergunta **se ele sabe por que recebeu a carta** (engaja antes de explicar).
+2. **Educa** em linguagem simples e **personalizada pelo imóvel**: a APP de curso d'água (faixa de 30 m, art. 4º) e o **déficit de Reserva Legal**, com o **porquê** e o **benefício** (crédito/PRA). Manda um **2º mapa "como deve ficar"** (mata ciliar em verde) e **sugere o caminho da RL** (ampliar a reserva atual / formar corredor).
+3. **Confere o entendimento** com uma **pergunta despretensiosa** (não um quiz) — e isso vira **métrica** (% que entenderam). Diferencial pedagógico.
+4. **Execução assistida** — guia o passo a passo e **termina no botão do SICAR**. **Não executa por ele** — o aceite só vale dentro do SICAR (Live 06).
+
+> **Estado atual:** implementado e funcional em `src/terra-em-dia-bot/` — ver §"Stack deste projeto".
 
 ### Diferencial (provado pelo vídeo oficial)
 As ferramentas oficiais ("Tô em Dia" / "Meu Imóvel Rural") traduzem a **checklist de crédito** (Manual de Crédito Rural, item 2.9 / Cap. 2 Seção 9) e mostram o **status** do CAR — mas **não traduzem as obrigações ambientais do Código Florestal por feição** (APP / déficit de RL / área a recompor). **Esse é o nosso buraco.** Evidência: `docs/base-documental/ecossistema/Meu-Imovel-Rural.md` + prints do vídeo. No pitch, citar como *"conforme o vídeo oficial de demonstração"* — **não** afirmar teste ao vivo.
@@ -107,7 +110,7 @@ Destaques para o D3:
 
 **Prazo final: domingo, 28/06/2026, 23:59 (Brasília).** Uma pessoa entrega pela equipe; vale a última versão enviada. Três entregas complementares:
 1. **Ideação** — perguntas objetivas (brainstorm, problema/quem sofre, solução, para quem, impacto, diferencial, viabilidade legal/técnica/operacional, tempo de implementação, como vira código aberto) + **feedback de mentoria (obrigatório, ≥1)**.
-2. **Protótipo** — **vídeo de 2 min** das telas (mockup de conversa; sem código). Edição livre.
+2. **Protótipo** — **vídeo de 2 min** demonstrando a solução. No nosso caso, a **conversa real no bot** (com os 2 mapas). Edição livre.
 3. **Pitch** — **slides + voz, máx. 3 min**, gravar (Canva sugerido), subir no YouTube, colar link. **Áudio não pode ser IA** — voz de um integrante.
 
 ## Metodologia (Duplo Diamante)
@@ -121,33 +124,42 @@ Destaques para o D3:
 3. Verifique se já existe no ecossistema oficial (Meu Imóvel Rural, RER); prefira **estender/integrar** a recriar.
 4. Pergunte se a melhor entrega é **protótipo/mockup** em vez de código — frequentemente é.
 5. Documentação, comentários e commits em **português do Brasil**. **Linguagem simples** em qualquer texto voltado ao usuário final.
+6. **Antes de cada commit, atualize o `CLAUDE.md` e os docs do projeto** (`docs/`, README, storyboard) para refletir o estado atual — nada pode ficar desatualizado.
 
 ## Stack deste projeto
 
-> Entrega **protótipo funcional** (bot de Telegram) + vídeo + pitch.
-- **Tipo de entrega:** **bot de Telegram funcional** (`src/terra-em-dia-bot/`) + vídeo de 2 min + pitch.
-- **Linguagem/runtime:** **Python 3.12**.
-- **Lib:** **`python-telegram-bot`** (v21+, async). Token via `.env` (**nunca** versionar).
-- **Fluxo da conversa:** **roteirizado/determinístico** (sem chave de API, reprodutível e open source). **Hook de LLM** opcional como upgrade — **agnóstico de modelo**.
-- **Dados do imóvel:** exemplo real **anonimizado** de Querência do Norte/PR, lido localmente (`src/.../imoveis.py`), **simulando** a leitura por API do CAR. cod_imovel real só em `data/` (gitignored).
-- **Métrica:** registro de compreensão (sim/não) em arquivo local gitignored → KPI "% que entendeu".
-- **Motor de cálculo (opcional, reaproveitável):** lógica declarado × referência do `desafio-2/` (PostGIS/QGIS) como "cérebro" para os números por feição.
+> Entrega **protótipo funcional** (bot de Telegram) + vídeo + pitch. Implementado em `src/terra-em-dia-bot/` (como rodar: `README.md` de lá).
+- **Linguagem/runtime:** **Python 3.12**. **venv com `--system-site-packages`** (para enxergar o **GDAL/`osgeo`** do sistema — não vem do pip).
+- **Telegram:** **`python-telegram-bot`** (v21+, async). Token via `.env`.
+- **Dados reais do CAR:** leitura por `cod_imovel` na **base oficial do Paraná** (`data/`, gitignored) via **`osgeo`/GDAL** — reaproveita o conceito do motor do D2. Registrar data de extração.
+- **Mapas:** **`matplotlib`** (offline) — dois: **"atual"** (perímetro + mata ciliar azul + RL) e **"como deve ficar"** (mata ciliar em verde).
+- **LLM (agnóstico):** interface **OpenAI-compatible** (`llm.py`), `base_url` configurável → OpenAI na demo, trocável por modelo **aberto/local** (Ollama/vLLM). **Fallback determinístico** (`conteudo.py`) se faltar chave.
+- **Métrica:** compreensão (sim/não) em arquivo local gitignored → KPI `/metricas`.
+- **Segurança:** `TELEGRAM_TOKEN`, `OPENAI_API_KEY` e `TERRA_DEMO_COD` (cod_imovel real) **só no `.env`**.
+
+**Módulos:** `bot.py` (fluxo) · `cadastro.py` (dados reais) · `analise.py` (regras do Código Florestal: APP/RL/déficit) · `mapa.py` (PNG) · `conteudo.py` (textos + heurística de compreensão) · `llm.py` · `metricas.py`.
 
 ## Estrutura do repositório
 ```
 /
 ├── CLAUDE.md              # este arquivo (Terra em Dia · D3)
-├── README.md              # visão do projeto D3
+├── README.md              # visão do projeto D3 + como rodar
 ├── docs/
 │   ├── base-documental/   # COMPARTILHADO (manuais, leis, metodologia, lives) — não versionar PDFs
-│   └── (briefing, descobrir, definir, prototipo do D3)
+│   └── descobrir/ definir/ desenvolver/ entregar/   # Duplo Diamante do D3
+├── src/terra-em-dia-bot/  # bot funcional (Python) — a solução
 ├── desafio-2/             # ARQUIVO do projeto anterior (NÃO sobrescrever)
-├── data/                  # bases (registrar data de extração; não versionar pesados)
+├── data/                  # bases reais (gitignored) + nota local do exemplo
 └── .env.example
 ```
 
-## Itens em aberto
-1. **Feição-herói da demo** — APP de curso d'água (recomendada) ou déficit de RL?
-2. **Estado-foco** do exemplo (regras federais como base).
-3. **Imóvel-exemplo** — representativo "Seu Raimundo" (ilustrativo) vs. imóvel público real (Consulta Pública); cuidar de privacidade.
-4. **Ferramenta de protótipo** (Figma / HTML / outro) e canal simulado (WhatsApp/Telegram).
+## Decisões fechadas
+- **Feição-herói:** APP de curso d'água (mata ciliar, art. 4º). **Estado:** Paraná (exemplo: **Querência do Norte**).
+- **Imóvel-exemplo:** **real, anonimizado** — 89,6 ha; mata ciliar ~2 ha; **déficit de RL ~9,6 ha**. `cod_imovel` só local.
+- **Canal:** **Telegram** (protótipo funcional); multicanal por princípio.
+- **LLM:** OpenAI na demo, atrás de interface agnóstica (trocável por modelo aberto/local).
+
+## Pendências (até a entrega — domingo 28/06)
+1. **Gravar o vídeo** de 2 min da conversa real (com os 2 mapas).
+2. **Ideação** — respostas às perguntas oficiais (puxar do Duplo Diamante em `docs/`).
+3. **Pitch** — slides + voz, 3 min.
