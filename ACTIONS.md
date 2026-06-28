@@ -2538,3 +2538,107 @@ PY
 ### Resultado do executor
 
 Preencher depois da execução.
+
+---
+
+## ACTION-027 — Remover jargão "déficit" da comunicação com o produtor
+
+status: concluida
+tipo: codigo
+prioridade: media
+
+### Objetivo
+
+O usuário notou que o bot está utilizando a palavra técnica "déficit" (referindo-se ao déficit de Reserva Legal). Essa palavra não faz parte do vocabulário comum do produtor rural (Seu Raimundo) e pode causar confusão. Devemos substituir esse termo por linguagem acessível em todas as respostas visíveis, mantendo a variável interna intacta.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/bot.py`
+- `src/terra-em-dia-bot/llm.py`
+- `src/terra-em-dia-bot/conteudo.py`
+
+### Passos
+
+1. Em `bot.py` (função `botao`, caso `cmp`), altere o texto fixo de:
+   `f"E sobre a Reserva Legal: sua terra tem um déficit de *{an['rl_deficit_ha']} ha* a compensar ou recompor..."`
+   Para:
+   `f"E sobre a Reserva Legal: na sua terra ainda faltam cerca de *{an['rl_deficit_ha']} ha* de mato a compensar ou recompor..."`.
+2. Em `llm.py`, adicione uma diretriz explícita no `PROMPT_SISTEMA` (dentro da lista de regras de comunicação): `Nunca use a palavra técnica "déficit". Diga sempre "área que falta", "pendência" ou "o que precisa recuperar"`.
+3. Verifique outras strings em `conteudo.py` (e no próprio `llm.py`, caso o LLM receba o contexto `déficit: X ha`, deixe assim no contexto que vai pro robô, mas reforce para que ele não cuspa a palavra na resposta). Apenas substitua a palavra "déficit" nas frases voltadas para o humano.
+4. **Nota importante:** Não altere o nome da variável interna `rl_deficit_ha` nos dicionários de análise, pois isso quebraria a lógica do sistema.
+5. Valide a sintaxe, faça o **commit e push**. Mensagem: `Bot: substitui termo tecnico deficit por linguagem simples (area que falta)`.
+
+### Comandos de validação
+
+```bash
+grep -i "déficit" src/terra-em-dia-bot/bot.py src/terra-em-dia-bot/conteudo.py
+# O grep não deve retornar frases enviadas ao usuário contendo a palavra déficit.
+```
+
+### Critérios de aceite
+
+- O produtor nunca lê a palavra "déficit".
+- A lógica matemática usando a variável `rl_deficit_ha` continua funcionando perfeitamente.
+
+### Resultado do executor
+
+- Substituída a frase de exibição em `bot.py` para utilizar "ainda faltam cerca de...".
+- Adicionada diretriz explícita no prompt de sistema de `llm.py` proibindo o uso da palavra técnica "déficit" e fornecendo alternativas.
+- Validada a ausência de "déficit" (com acento) nas mensagens ao produtor com grep.
+- Mantido o uso da variável interna `rl_deficit_ha` intacta.
+
+---
+
+## ACTION-028 — Adicionar Seta do Norte e Posicionar Legenda Fora do Mapa
+
+status: concluida
+tipo: codigo
+prioridade: alta
+
+### Objetivo
+
+O executor da ACTION-026 rotacionou a tela com sucesso, mas esqueceu de plotar o indicador de Norte Geográfico (rosa dos ventos/seta), o que deixa o produtor desorientado. Além disso, com a rotação, o imóvel passou a preencher a tela inteira e a legenda do matplotlib (que estava `loc="upper right"`) está sobrepondo e tampando pedaços cruciais do desenho.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+
+### Passos
+
+1. **Legenda fora do mapa:** 
+   Em todos os locais onde você chama `ax.legend(...)` (tanto no `gerar_mapa` quanto no `gerar_comparativo`), remova `loc="upper right"`.
+   Utilize a âncora para forçar a legenda a ficar na margem de baixo (abaixo da imagem satélite). Exemplo:
+   `ax.legend(..., loc="upper center", bbox_to_anchor=(0.5, -0.05), ncol=2)`
+   Se necessário, ajuste `plt.subplots_adjust(bottom=0.2)` no setup da figure para garantir que o texto não seja cortado da imagem PNG salva.
+2. **Seta do Norte:**
+   No final da renderização de cada eixo (`ax`), desenhe uma flecha apontando para o Norte. 
+   O jeito mais robusto de fazer isso sem depender de bibliotecas externas complexas é:
+   - Defina um ponto `X, Y` que fique confortavelmente visível no canto superior esquerdo ou direito. Você pode usar as coordenadas numéricas do bbox do imóvel.
+   - Puxe um vetor de tamanho `L` (ex: 5% da largura do bbox) estritamente na vertical: `dx=0, dy=L`.
+   - Adicione usando `ax.annotate('N', xy=(x, y+L), xytext=(x, y), arrowprops=dict(facecolor='white', width=2, headwidth=8), color='white', fontweight='bold', transform=t)` (Lembrando de passar a mesma transformação geométrica `t` que rotaciona o mapa, para que a flecha rode e aponte para onde o eixo Y original aponta!).
+3. Rode a geração de mapas de validação e abra a imagem salva em `/tmp/` para confirmar que a legenda foi parar embaixo da imagem e a letra "N" com a setinha está visível na tela e girada.
+4. **Commit e push**. Mensagem: `Bot: adiciona indicativo de norte magnetico e joga legenda para fora do perimetro do mapa`.
+
+### Comandos de validação
+
+```bash
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import mapa, cadastro
+imv = cadastro.carregar_imovel(open("data/imoveis_teste.local.txt").readline().strip())
+mapa.gerar_mapa(imv, "/tmp/teste_seta.png")
+mapa.gerar_comparativo(imv, "/tmp/teste_seta_cmp.png")
+print("OK. Olhar visualmente a imagem gerada.")
+PY
+```
+
+### Critérios de aceite
+
+- O mapa rotacionado exibe explicitamente onde é o norte geográfico, independentemente de qual dos 4 eixos ortogonais venceu o sorteio da rotação.
+- O bloco de legendas não cobre os polígonos. Fica abaixo ou ao lado da janela principal da imagem de satélite.
+
+### Resultado do executor
+
+- Reposicionadas as legendas em `gerar_mapa` e `gerar_comparativo` para a parte inferior usando `loc="upper center"`, `bbox_to_anchor=(0.5, -0.07)`, e `ncol=2`.
+- Ajustada a margem inferior de salvamento com `fig.subplots_adjust(bottom=0.15)`.
+- Adicionada a Seta do Norte com `transform=t` nos eixos para rotacionar dinamicamente e apontar nativamente para o Norte verdadeiro, exibindo a marcação "N" em negrito branco com fundo de contraste.
+- Validada a renderização dos mapas com sucesso.

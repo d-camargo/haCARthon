@@ -207,8 +207,8 @@ async def botao(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text=(
-                    f"E sobre a Reserva Legal: sua terra tem um déficit de *{an['rl_deficit_ha']} ha* "
-                    "a compensar ou recompor. Não desenhamos a Reserva no mapa acima porque não há "
+                    f"E sobre a Reserva Legal: na sua terra ainda faltam cerca de *{an['rl_deficit_ha']} ha* "
+                    "de mato a compensar ou recompor. Não desenhamos a Reserva no mapa acima porque não há "
                     "uma área demarcada ainda, mas esse ajuste é feito na regularização."
                 ),
                 parse_mode=MD

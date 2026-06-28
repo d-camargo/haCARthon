@@ -363,27 +363,19 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
     ax.set_ylim(ymin_rot, ymax_rot)
     ax.set_aspect("equal")
 
-    # Seta do Norte no canto superior direito
-    arrow_x, arrow_y = 0.92, 0.90
-    rad_north = math.radians(theta)
-    dx = -0.04 * math.sin(rad_north)
-    dy = 0.04 * math.cos(rad_north)
+    # Seta do Norte dinâmica usando transform=t (ACTION-028)
+    L = (xmax_rot - xmin_rot) * 0.05
+    x_rot = xmax_rot - 0.08 * (xmax_rot - xmin_rot)
+    y_rot = ymax_rot - 0.08 * (ymax_rot - ymin_rot)
+    x_unrot, y_unrot = _rotate_pt(x_rot, y_rot, cx, cy, -theta)
     ax.annotate(
-        "",
-        xy=(arrow_x + dx, arrow_y + dy),
-        xytext=(arrow_x, arrow_y),
-        textcoords="axes fraction",
-        xycoords="axes fraction",
-        arrowprops=dict(facecolor="black", edgecolor="black", width=1.5, headwidth=5, headlength=5, shrink=0),
-        zorder=5
-    )
-    ax.text(
-        arrow_x + 1.4 * dx,
-        arrow_y + 1.4 * dy,
         "N",
-        transform=ax.transAxes,
+        xy=(x_unrot, y_unrot + L),
+        xytext=(x_unrot, y_unrot),
+        arrowprops=dict(facecolor="white", edgecolor="black", width=2, headwidth=8, shrink=0),
+        color="white", fontweight="bold", fontsize=10,
         ha="center", va="center",
-        fontsize=9, weight="bold", color="black",
+        transform=t,
         zorder=5
     )
 
@@ -409,7 +401,8 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
         handles.append(plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["rl"]["face"],
                                      alpha=0.7, label=ESTILO["rl"]["label"]))
 
-    ax.legend(handles=handles, loc="upper right", fontsize=9, framealpha=0.9)
+    # Legenda fora do mapa (margem inferior) (ACTION-028)
+    ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.07), ncol=2, fontsize=9, framealpha=0.9)
 
     municipio = imovel["attrs"].get("municipio", "")
     uf = imovel["attrs"].get("uf", "")
@@ -422,6 +415,7 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
         s.set_visible(False)
 
     fig.tight_layout()
+    fig.subplots_adjust(bottom=0.15)
     fig.savefig(saida, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return saida
@@ -611,27 +605,20 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
         for s in ax.spines.values():
             s.set_visible(False)
 
-        # Seta do Norte em cada painel
-        arrow_x, arrow_y = 0.92, 0.90
-        rad_north = math.radians(theta)
-        dx = -0.04 * math.sin(rad_north)
-        dy = 0.04 * math.cos(rad_north)
+        # Seta do Norte em cada painel usando transform (ACTION-028)
+        L = (xmax_rot - xmin_rot) * 0.05
+        x_rot = xmax_rot - 0.08 * (xmax_rot - xmin_rot)
+        y_rot = ymax_rot - 0.08 * (ymax_rot - ymin_rot)
+        x_unrot, y_unrot = _rotate_pt(x_rot, y_rot, cx, cy, -theta)
+        t_ax = t1 if ax == ax1 else t2
         ax.annotate(
-            "",
-            xy=(arrow_x + dx, arrow_y + dy),
-            xytext=(arrow_x, arrow_y),
-            textcoords="axes fraction",
-            xycoords="axes fraction",
-            arrowprops=dict(facecolor="black", edgecolor="black", width=1.5, headwidth=5, headlength=5, shrink=0),
-            zorder=5
-        )
-        ax.text(
-            arrow_x + 1.4 * dx,
-            arrow_y + 1.4 * dy,
             "N",
-            transform=ax.transAxes,
+            xy=(x_unrot, y_unrot + L),
+            xytext=(x_unrot, y_unrot),
+            arrowprops=dict(facecolor="white", edgecolor="black", width=2, headwidth=8, shrink=0),
+            color="white", fontweight="bold", fontsize=10,
             ha="center", va="center",
-            fontsize=9, weight="bold", color="black",
+            transform=t_ax,
             zorder=5
         )
 
@@ -648,14 +635,14 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
         label_hoje = "Área que precisa de mata ciliar"
         label_meta = est_em_dia["label"]
 
-    # 6. Legendas curtas
+    # 6. Legendas curtas (ACTION-028)
     h1 = [plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["perimetro"]["face"],
                         edgecolor=ESTILO["perimetro"]["edge"], alpha=0.7,
                         label=ESTILO["perimetro"]["label"])]
     if imovel["app"]:
         h1.append(plt.Rectangle((0, 0), 1, 1, facecolor="none", edgecolor=est_hoje["edge"],
                                 linewidth=2.0, label=label_hoje))
-    ax1.legend(handles=h1, loc="upper right", fontsize=8, framealpha=0.9)
+    ax1.legend(handles=h1, loc="upper center", bbox_to_anchor=(0.5, -0.07), ncol=2, fontsize=8, framealpha=0.9)
 
     h2 = [plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["perimetro"]["face"],
                         edgecolor=ESTILO["perimetro"]["edge"], alpha=0.7,
@@ -663,13 +650,14 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
     if imovel["app"]:
         h2.append(plt.Rectangle((0, 0), 1, 1, facecolor=est_em_dia["face"],
                                 alpha=0.8, label=label_meta))
-    ax2.legend(handles=h2, loc="upper right", fontsize=8, framealpha=0.9)
+    ax2.legend(handles=h2, loc="upper center", bbox_to_anchor=(0.5, -0.07), ncol=2, fontsize=8, framealpha=0.9)
 
     municipio = imovel["attrs"].get("municipio", "")
     uf = imovel["attrs"].get("uf", "")
     fig.suptitle(f"Comparativo da beira do rio - {municipio}/{uf}".strip(" -/"), fontsize=13, weight="bold", y=0.98)
 
     fig.tight_layout()
+    fig.subplots_adjust(bottom=0.15)
     fig.savefig(saida, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return saida
