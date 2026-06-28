@@ -88,13 +88,14 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
         w = max(200, w)
         h = max(200, h)
         
+        import json
         params = {
             "bbox": f"{xmin},{ymin},{xmax},{ymax}",
             "bboxSR": "4326",
             "imageSR": "4326",
             "size": f"{w},{h}",
             "format": "jpg",
-            "f": "image"
+            "f": "json"
         }
         url = "https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?" + urllib.parse.urlencode(params)
         
@@ -103,14 +104,25 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
             headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         )
         with urllib.request.urlopen(req, timeout=20) as resp:
-            img = Image.open(io.BytesIO(resp.read()))
+            dados_json = json.loads(resp.read().decode("utf-8"))
+            
+        href = dados_json["href"]
+        extent_real = dados_json["extent"]
+        
+        req_img = urllib.request.Request(
+            href,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        )
+        with urllib.request.urlopen(req_img, timeout=20) as resp_img:
+            img = Image.open(io.BytesIO(resp_img.read()))
     except Exception:
         # Fallback offline (fundo branco)
         img = None
+        extent_real = None
 
-    satelite_ok = img is not None
+    satelite_ok = img is not None and extent_real is not None
     if satelite_ok:
-        ax.imshow(img, extent=[xmin, xmax, ymin, ymax], origin="upper", zorder=0)
+        ax.imshow(img, extent=[extent_real["xmin"], extent_real["xmax"], extent_real["ymin"], extent_real["ymax"]], origin="upper", zorder=0)
 
     # 3. Desenha as feições
     _desenha(ax, imovel["perimetro"], ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
@@ -186,13 +198,14 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
         w = max(200, w)
         h = max(200, h)
         
+        import json
         params = {
             "bbox": f"{xmin},{ymin},{xmax},{ymax}",
             "bboxSR": "4326",
             "imageSR": "4326",
             "size": f"{w},{h}",
             "format": "jpg",
-            "f": "image"
+            "f": "json"
         }
         url = "https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?" + urllib.parse.urlencode(params)
         
@@ -201,11 +214,22 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
             headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         )
         with urllib.request.urlopen(req, timeout=20) as resp:
-            img = Image.open(io.BytesIO(resp.read()))
+            dados_json = json.loads(resp.read().decode("utf-8"))
+            
+        href = dados_json["href"]
+        extent_real = dados_json["extent"]
+        
+        req_img = urllib.request.Request(
+            href,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        )
+        with urllib.request.urlopen(req_img, timeout=20) as resp_img:
+            img = Image.open(io.BytesIO(resp_img.read()))
     except Exception:
         img = None
+        extent_real = None
 
-    satelite_ok = img is not None
+    satelite_ok = img is not None and extent_real is not None
 
     # Estilos customizados para contraste real
     est_hoje = ESTILO["app"].copy()
@@ -218,17 +242,32 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
 
     # 3. Painel da esquerda: "Hoje" (contorno/chão apenas)
     if satelite_ok:
-        ax1.imshow(img, extent=[xmin, xmax, ymin, ymax], origin="upper", zorder=0)
+        ax1.imshow(img, extent=[extent_real["xmin"], extent_real["xmax"], extent_real["ymin"], extent_real["ymax"]], origin="upper", zorder=0)
     _desenha(ax1, imovel["perimetro"], ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
     for f in imovel["app"]:
         _desenha(ax1, f["polys"], est_hoje, zorder=2, satelite=satelite_ok)
 
     # 4. Painel da direita: "Como deve ficar (Meta)" (verde sólido)
     if satelite_ok:
-        ax2.imshow(img, extent=[xmin, xmax, ymin, ymax], origin="upper", zorder=0)
+        ax2.imshow(img, extent=[extent_real["xmin"], extent_real["xmax"], extent_real["ymin"], extent_real["ymax"]], origin="upper", zorder=0)
     _desenha(ax2, imovel["perimetro"], ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
     for f in imovel["app"]:
         _desenha(ax2, f["polys"], est_em_dia, zorder=2, satelite=satelite_ok)
+
+    # Adiciona a cota visual de 30m no painel da solução (ax2)
+    cx = (xmin + xmax) / 2
+    cy = (ymin + ymax) / 2
+    ax2.annotate(
+        "Faixa legal:\n30m da margem",
+        xy=(cx, cy),
+        xytext=(0, 20),
+        textcoords="offset points",
+        ha="center", va="center",
+        fontsize=10, weight="bold", color="black",
+        arrowprops=dict(arrowstyle="->", color="black", lw=1.5),
+        bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.85, edgecolor="none"),
+        zorder=4
+    )
 
     # 5. Formatação dos eixos, proporção e títulos
     for ax in (ax1, ax2):
@@ -241,7 +280,7 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
             s.set_visible(False)
 
     ax1.set_title("Hoje: a beira do rio", fontsize=12, weight="bold")
-    ax2.set_title("Em dia: coberta de mato 🌳", fontsize=12, weight="bold")
+    ax2.set_title("Em dia: faixa de 30m coberta 🌳", fontsize=12, weight="bold")
 
     # 6. Legendas curtas
     h1 = [plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["perimetro"]["face"],

@@ -1946,3 +1946,162 @@ PY
 - Integrada a chamada de `medir_app(imovel)` em `analise.py` fundindo os dados no dicionário de análise.
 - Atualizados os módulos `conteudo.py` e `llm.py` para exibir e instruir o modelo no confronto da largura média declarada versus a exigência de 30 metros, de forma honesta, tratada como aproximada e com uma unidade de medida por vez.
 - Documentado o novo módulo `geo_app.py` e a base legal de medição de APP em `README.md`.
+
+---
+
+## ACTION-016 — Alinhamento universal do satélite: usar o extent devolvido pelo Esri
+
+status: concluida
+tipo: codigo
+prioridade: alta
+
+### Objetivo
+
+Resolver definitivamente o desalinhamento do satélite com os vetores para propriedades com formatos extremos (muito longas ou muito largas), onde o `clamp` de tamanho limitando a 200px quebrava a proporção (aspect ratio). A solução definitiva é usar a alternativa apontada anteriormente: solicitar o formato JSON da imagem para o Esri e utilizar o `extent` real devolvido pela API no `imshow`.
+
+### Contexto
+
+O usuário relatou desalinhamento testando outras propriedades. Como o `clamp` na ACTION-014 fixava largura ou altura em no mínimo 200 pixels `max(200, w)`, se a propriedade fosse incrivelmente fina, o cálculo original da dimensão cairia para menos de 200, e o `max` quebraria a proporção. O Esri então devolvia uma imagem que **não correspondia ao bbox solicitado**, desalinhando a camada de vetores.
+Utilizando `f=json`, a API responde com um JSON contendo uma URL `href` para a imagem gerada e o `extent` exato daquela imagem. Ao utilizar este `extent` na hora de desenhar a imagem no Matplotlib, o alinhamento com os vetores é perfeito, independente de distorções na hora de pedir a imagem.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+- `src/terra-em-dia-bot/README.md`
+
+### Arquivos proibidos
+
+- `.env` e afins · `data/**` · `desafio-2/**` · `.sqlite` · `.pdf`
+- `bot.py` · `conteudo.py` · `cadastro.py` · `analise.py` · `llm.py` · `memoria.py` (apenas importe, não altere)
+
+### Passos
+
+1. Em `mapa.py`, nas funções `gerar_mapa` e `gerar_comparativo`, altere a construção da URL do Esri: passe `"f": "json"` nos parâmetros em vez de `"image"`.
+2. Após o `urllib.request.urlopen(req...)`, leia a resposta inicial como JSON (`import json`). Extraia o link da imagem pela chave `href` e faça uma **segunda requisição** a esse link para baixar a imagem (usando `Image.open(io.BytesIO(...))`).
+3. Extraia o `extent` devolvido pela API: `e = dados_json["extent"]`.
+4. Na chamada `ax.imshow`, modifique o parâmetro `extent` para usar as coordenadas retornadas pela API em vez do bbox original da função: `extent=[e["xmin"], e["xmax"], e["ymin"], e["ymax"]]`.
+5. Mantenha as chamadas `ax.set_xlim(xmin, xmax)` e `ax.set_ylim(ymin, ymax)` inalteradas (usando as variáveis `xmin` e `ymax` originais calculadas com a margem do vetor). Isso garantirá o enquadramento (crop) exato no gráfico, enquanto o satélite no fundo fica posicionado perfeitamente.
+6. Mantenha os cálculos atuais de `w` e `h` (a lógica do MAXDIM) para a URL do Esri.
+7. Atualize o `README.md` relatando que o alinhamento definitivo do satélite é feito utilizando o `extent` real retornado pelo JSON do ArcGIS/Esri, tornando o bot robusto para propriedades de qualquer proporção.
+8. Valide e em seguida faça o **commit e push** seguindo as travas da ACTION-008. Mensagem sugerida:
+   `Bot: alinhamento universal do satelite pelo extent JSON do Esri`.
+
+### Comandos de validação
+
+```bash
+python -m py_compile src/terra-em-dia-bot/*.py
+```
+
+```bash
+# Testa o gerador de imagem na cli
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import cadastro, analise, mapa, os
+cods=[l.strip() for l in open("data/imoveis_teste.local.txt") if l.strip() and not l.startswith("#")]
+imv=cadastro.carregar_imovel(cods[0])
+out=mapa.gerar_mapa(imv, "/tmp/mapa_test_json.png")
+assert out and os.path.getsize(out)>0
+print("OK mapa via JSON gerado:", os.path.getsize(out), "bytes")
+PY
+```
+
+### Critérios de aceite
+
+- O satélite alinha perfeitamente com os vetores nas camadas do mapa atual, da solução e no comparativo, mesmo em imóveis extremamente estreitos ou compridos.
+- As imagens são requeridas via `f=json` no Esri e baixadas com precisão pelo campo `href`.
+- Validações passam e os artefatos visuais são gerados com sucesso; commit e push realizados.
+
+### Forma errada provável
+
+- Omitir a segunda requisição e tentar abrir a resposta do `f=json` diretamente com PIL (o que causará erro pois não é uma imagem).
+- Passar os valores originais de `xmin, xmax, ymin, ymax` para o argumento `extent` do `imshow` em vez do valor retornado no JSON.
+- Alterar o `set_xlim`/`set_ylim` para usar o retorno do JSON (isso faria com que as margens no matplotlib pudessem ficar irregulares, em vez do crop intencionado original).
+
+### Resultado do executor
+
+- Refatorada a chamada à API do ArcGIS/Esri em `gerar_mapa` e `gerar_comparativo` para solicitar o formato `f=json` ao invés de baixar a imagem diretamente.
+- O JSON retornado contém a URL real da imagem (`href`) e o `extent` geográfico preciso associado. Realizamos uma segunda requisição a este `href` para baixar a imagem e passamos o `extent` do JSON para o parâmetro correspondente em `ax.imshow`.
+- Isso garante que a imagem de satélite fique perfeitamente alinhada com os vetores de limites e áreas protegidas, independentemente das distorções de tamanho decorrentes de clamps de aspect ratio mínimo de 200px em propriedades com formatos extremamente estreitos ou largos.
+- Atualizado o `README.md` relatando o alinhamento definitivo.
+
+---
+
+## ACTION-017 — Comparativo visual mais didático: adicionar "cota" (indicação de 30m) no painel da solução
+
+status: concluida
+tipo: codigo
+prioridade: alta
+
+### Objetivo
+
+O usuário notou que os painéis "Hoje" e "Em dia" do comparativo usam a mesma geometria da APP (porque não temos a geometria original "faltante" para o antes, apenas a geometria da APP exigida no cadastro). Embora as cores mudem (contorno vs preenchido), não fica óbvio para o produtor rural o que ele deve fazer, já que o polígono em si é do mesmo tamanho.
+A solução é adicionar uma anotação clara (uma "cota" ou indicação com seta/caixa de texto) sobrepondo a mata ciliar no painel "Em dia", indicando visualmente a exigência: "30m a partir da margem".
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+- `src/terra-em-dia-bot/README.md`
+
+### Arquivos proibidos
+
+- `.env` e afins · `data/**` · `desafio-2/**` · `.sqlite` · `.pdf`
+- `bot.py` · `conteudo.py` · `cadastro.py` · `analise.py` · `llm.py` · `memoria.py` (só importar)
+
+### Passos
+
+1. Em `mapa.py`, na função `gerar_comparativo`, após desenhar o painel da direita (`ax2`), calcule o centro aproximado do enquadramento que está sendo exibido (`cx = (xmin + xmax) / 2`, `cy = (ymin + ymax) / 2`).
+2. Adicione uma anotação em `ax2` usando `ax2.annotate`. Use a seguinte direção:
+   ```python
+   # Caixa de texto com fundo branco semitransparente para não sumir no verde
+   ax2.annotate(
+       "Faixa legal:\n30m da margem",
+       xy=(cx, cy),
+       xytext=(0, 20),
+       textcoords="offset points",
+       ha="center", va="center",
+       fontsize=10, weight="bold", color="black",
+       arrowprops=dict(arrowstyle="->", color="black", lw=1.5),
+       bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.85, edgecolor="none"),
+       zorder=4
+   )
+   ```
+   *Nota: Se quiser maior precisão, pode pegar o centro do polígono da APP (`imovel["app"][0]["polys"][0]`), mas usar o centro do enquadramento `(cx, cy)` é suficiente, pois o zoom do painel já está restrito na feição da APP.*
+3. Para complementar a clareza didática, ajuste o título do painel `ax2` para: `"Em dia: faixa de 30m coberta 🌳"`.
+4. Atualize o `README.md` relatando que o mapa comparativo inclui uma cota indicativa sobre a exigência de 30m, facilitando a interpretação.
+5. Valide, e então faça **commit e push** (seguindo as travas da ACTION-008). Mensagem sugerida: `Bot: adiciona cota visual de 30m no comparativo da APP`.
+
+### Comandos de validação
+
+```bash
+python -m py_compile src/terra-em-dia-bot/*.py
+```
+
+```bash
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import cadastro, mapa, os
+cods=[l.strip() for l in open("data/imoveis_teste.local.txt") if l.strip() and not l.startswith("#")]
+imv=cadastro.carregar_imovel(cods[0])
+out=mapa.gerar_comparativo(imv, "/tmp/mapa_cota.png")
+assert out and os.path.getsize(out)>0
+print("OK comparativo com cota gerado:", os.path.getsize(out), "bytes")
+PY
+```
+
+### Critérios de aceite
+
+- O painel "Em dia" do comparativo agora apresenta um balão ou seta com a indicação explícita "Faixa legal: 30m da margem".
+- A legibilidade dessa cota no satélite deve ser garantida (ex: uso de fundo branco semi-opaco no texto).
+- O arquivo README deve registrar a mudança visual.
+- A aplicação roda sem quebras (as validações passam) e o código é versionado em git.
+
+### Forma errada provável
+
+- Tentar calcular distâncias exatas de 30m convertendo SRC (EPSG:4674) para metros na hora de desenhar uma reta matemática, e errar a escala visual no gráfico. Basta colocar o label apontando.
+- Esquecer do `zorder` no `annotate`, fazendo com que a anotação fique invisível atrás do polígono ou do satélite.
+
+### Resultado do executor
+
+- Adicionada uma anotação gráfica com seta (`ax2.annotate`) apontando no painel da direita ("Em dia") com o texto `"Faixa legal:\n30m da margem"`.
+- A anotação utiliza uma caixa de texto com fundo branco semi-opaco (`alpha=0.85`), texto em preto e negrito, e `zorder=4`, garantindo legibilidade perfeita sob a camada do satélite e polígonos.
+- Ajustado o título do painel da solução para `"Em dia: faixa de 30m coberta 🌳"`.
+- Registrada a alteração visual no `README.md`.
+
