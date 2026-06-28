@@ -53,47 +53,93 @@ def _bounds(polys, b):
     return b
 
 
-def _obter_hidrografia_externa(xmin: float, ymin: float, xmax: float, ymax: float, epsg_utm: int) -> list:
-    """Consulta a API REST do GeoPR (IAT) para obter linhas de hidrografia no bbox, em UTM."""
-    import urllib.request
-    import urllib.parse
-    import json
-    import ssl
-    
-    linhas = []
+def _gerar_buffer_app(app_utm: list, perimetro_utm: list) -> list:
+    """Gera o buffer de 13m da APP declarada restrita ao perímetro do imóvel."""
+    if not app_utm:
+        return []
     try:
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-
-        params = {
-            "geometry": f"{xmin},{ymin},{xmax},{ymax}",
-            "geometryType": "esriGeometryEnvelope",
-            "inSR": str(epsg_utm),
-            "spatialRel": "esriSpatialRelIntersects",
-            "outSR": str(epsg_utm),
-            "f": "json",
-            "returnGeometry": "true",
-            "outFields": "rio"
-        }
-        url = "https://geopr.iat.pr.gov.br/server/rest/services/00_PUBLICACOES/zee_rios/MapServer/0/query?" + urllib.parse.urlencode(params)
+        from osgeo import ogr
         
-        req = urllib.request.Request(
-            url,
-            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-        )
-        with urllib.request.urlopen(req, timeout=8, context=ctx) as resp:
-            res = json.loads(resp.read().decode("utf-8"))
-            for feat in res.get("features", []):
-                geom = feat.get("geometry", {})
-                for path in geom.get("paths", []):
-                    pts = [(pt[0], pt[1]) for pt in path]
-                    if pts:
-                        linhas.append(pts)
+        # 1. Converte perímetro para OGR geometry
+        geom_perimetro = ogr.Geometry(ogr.wkbMultiPolygon)
+        for ext, furos in perimetro_utm:
+            poly = ogr.Geometry(ogr.wkbPolygon)
+            ring_ext = ogr.Geometry(ogr.wkbLinearRing)
+            for x, y in ext:
+                ring_ext.AddPoint(x, y)
+            if ext and (ext[0] != ext[-1]):
+                ring_ext.AddPoint(ext[0][0], ext[0][1])
+            poly.AddGeometry(ring_ext)
+            for f in furos:
+                ring_f = ogr.Geometry(ogr.wkbLinearRing)
+                for x, y in f:
+                    ring_f.AddPoint(x, y)
+                if f and (f[0] != f[-1]):
+                    ring_f.AddPoint(f[0][0], f[0][1])
+                poly.AddGeometry(ring_f)
+            geom_perimetro.AddGeometry(poly)
+
+        # 2. Converte todas as APPs locais para OGR geometry
+        geom_app = ogr.Geometry(ogr.wkbMultiPolygon)
+        for f in app_utm:
+            for ext, furos in f["polys"]:
+                poly = ogr.Geometry(ogr.wkbPolygon)
+                ring_ext = ogr.Geometry(ogr.wkbLinearRing)
+                for x, y in ext:
+                    ring_ext.AddPoint(x, y)
+                if ext and (ext[0] != ext[-1]):
+                    ring_ext.AddPoint(ext[0][0], ext[0][1])
+                poly.AddGeometry(ring_ext)
+                for f_fur in furos:
+                    ring_f = ogr.Geometry(ogr.wkbLinearRing)
+                    for x, y in f_fur:
+                        ring_f.AddPoint(x, y)
+                    if f_fur and (f_fur[0] != f_fur[-1]):
+                        ring_f.AddPoint(f_fur[0][0], f_fur[0][1])
+                    poly.AddGeometry(ring_f)
+                geom_app.AddGeometry(poly)
+
+        # 3. Faz o buffer de 13 metros
+        geom_app_buffer = geom_app.Buffer(13.0)
+        
+        # 4. Intersecção com o perímetro
+        geom_app_ideal = geom_app_buffer.Intersection(geom_perimetro)
+        
+        # 5. Converte de volta para a lista de polys
+        def _geom_to_polys(g: ogr.Geometry) -> list:
+            p_list = []
+            if g is None or g.IsEmpty():
+                return p_list
+            g_name = g.GetGeometryName()
+            if g_name == 'MULTIPOLYGON':
+                for idx in range(g.GetGeometryCount()):
+                    p_list.extend(_geom_to_polys(g.GetGeometryRef(idx)))
+            elif g_name == 'POLYGON':
+                ext_pts = []
+                furos_pts = []
+                for ring_idx in range(g.GetGeometryCount()):
+                    ring = g.GetGeometryRef(ring_idx)
+                    pts = []
+                    for pt_idx in range(ring.GetPointCount()):
+                        pt = ring.GetPoint(pt_idx)
+                        pts.append((pt[0], pt[1]))
+                    if ring_idx == 0:
+                        ext_pts = pts
+                    else:
+                        furos_pts.append(pts)
+                if ext_pts:
+                    p_list.append((ext_pts, furos_pts))
+            elif g_name == 'GEOMETRYCOLLECTION':
+                for idx in range(g.GetGeometryCount()):
+                    p_list.extend(_geom_to_polys(g.GetGeometryRef(idx)))
+            return p_list
+
+        return _geom_to_polys(geom_app_ideal)
     except Exception:
-        # Silencioso e defensivo
-        pass
-    return linhas
+        fallback = []
+        for f in app_utm:
+            fallback.extend(f["polys"])
+        return fallback
 
 
 def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
@@ -191,8 +237,15 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
     # 3. Desenha as feições
     _desenha(ax, perimetro_utm, ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
     app_est = ESTILO["app_meta"] if meta else ESTILO["app"]
-    for f in app_utm:
-        _desenha(ax, f["polys"], app_est, zorder=2, satelite=satelite_ok)
+
+    if meta:
+        app_desenhar = _gerar_buffer_app(app_utm, perimetro_utm)
+    else:
+        app_desenhar = []
+        for f in app_utm:
+            app_desenhar.extend(f["polys"])
+
+    _desenha(ax, app_desenhar, app_est, zorder=2, satelite=satelite_ok)
     if not meta:  # no mapa-meta, foco na mata ciliar
         for f in rl_utm:
             _desenha(ax, f["polys"], ESTILO["rl"], zorder=2, satelite=satelite_ok)
@@ -201,12 +254,24 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
     ax.set_ylim(ymin, ymax)
     ax.set_aspect("equal")
 
+    res_app = geo_app.medir_app(imovel)
+    if res_app:
+        ha_decl = res_app.get("app_area_decl_ha", 0.0)
+        ha_legal = res_app.get("app_area_legal_ha", 0.0)
+        label_hoje = f"Área a recuperar: ~{ha_decl} ha"
+        label_meta = f"Área meta (30m): ~{ha_legal} ha"
+    else:
+        label_hoje = ESTILO["app"]["label"]
+        label_meta = ESTILO["app_meta"]["label"]
+
+    label_app = label_meta if meta else label_hoje
+
     handles = [plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["perimetro"]["face"],
                              edgecolor=ESTILO["perimetro"]["edge"], alpha=0.7,
                              label=ESTILO["perimetro"]["label"])]
     if imovel["app"]:
         handles.append(plt.Rectangle((0, 0), 1, 1, facecolor=app_est["face"],
-                                     alpha=0.8, label=app_est["label"]))
+                                     alpha=0.8, label=label_app))
     if imovel["rl"] and not meta:
         handles.append(plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["rl"]["face"],
                                      alpha=0.7, label=ESTILO["rl"]["label"]))
@@ -253,91 +318,8 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
         })
 
     # Se a feição for 'app', geramos a APP ideal via Buffer + Intersect no Perímetro (ACTION-020)
-    app_meta_polys = []
-    if feicao == "app" and app_utm:
-        try:
-            from osgeo import ogr
-            
-            # 1. Converte perímetro para OGR geometry
-            geom_perimetro = ogr.Geometry(ogr.wkbMultiPolygon)
-            for ext, furos in perimetro_utm:
-                poly = ogr.Geometry(ogr.wkbPolygon)
-                ring_ext = ogr.Geometry(ogr.wkbLinearRing)
-                for x, y in ext:
-                    ring_ext.AddPoint(x, y)
-                if ext and (ext[0] != ext[-1]):
-                    ring_ext.AddPoint(ext[0][0], ext[0][1])
-                poly.AddGeometry(ring_ext)
-                for f in furos:
-                    ring_f = ogr.Geometry(ogr.wkbLinearRing)
-                    for x, y in f:
-                        ring_f.AddPoint(x, y)
-                    if f and (f[0] != f[-1]):
-                        ring_f.AddPoint(f[0][0], f[0][1])
-                    poly.AddGeometry(ring_f)
-                geom_perimetro.AddGeometry(poly)
-
-            # 2. Converte todas as APPs locais para OGR geometry
-            geom_app = ogr.Geometry(ogr.wkbMultiPolygon)
-            for f in app_utm:
-                for ext, furos in f["polys"]:
-                    poly = ogr.Geometry(ogr.wkbPolygon)
-                    ring_ext = ogr.Geometry(ogr.wkbLinearRing)
-                    for x, y in ext:
-                        ring_ext.AddPoint(x, y)
-                    if ext and (ext[0] != ext[-1]):
-                        ring_ext.AddPoint(ext[0][0], ext[0][1])
-                    poly.AddGeometry(ring_ext)
-                    for f_fur in furos:
-                        ring_f = ogr.Geometry(ogr.wkbLinearRing)
-                        for x, y in f_fur:
-                            ring_f.AddPoint(x, y)
-                        if f_fur and (f_fur[0] != f_fur[-1]):
-                            ring_f.AddPoint(f_fur[0][0], f_fur[0][1])
-                        poly.AddGeometry(ring_f)
-                    geom_app.AddGeometry(poly)
-
-            # 3. Faz o buffer de 13 metros (para aproximar os 30m ideais, partindo de ~17m existentes)
-            geom_app_buffer = geom_app.Buffer(13.0)
-            
-            # 4. Intersecção com o perímetro
-            geom_app_ideal = geom_app_buffer.Intersection(geom_perimetro)
-            
-            # 5. Converte de volta para a lista de polys
-            def _geom_to_polys(g: ogr.Geometry) -> list:
-                p_list = []
-                if g is None or g.IsEmpty():
-                    return p_list
-                g_name = g.GetGeometryName()
-                if g_name == 'MULTIPOLYGON':
-                    for idx in range(g.GetGeometryCount()):
-                        p_list.extend(_geom_to_polys(g.GetGeometryRef(idx)))
-                elif g_name == 'POLYGON':
-                    ext_pts = []
-                    furos_pts = []
-                    for ring_idx in range(g.GetGeometryCount()):
-                        ring = g.GetGeometryRef(ring_idx)
-                        pts = []
-                        for pt_idx in range(ring.GetPointCount()):
-                            pt = ring.GetPoint(pt_idx)
-                            pts.append((pt[0], pt[1]))
-                        if ring_idx == 0:
-                            ext_pts = pts
-                        else:
-                            furos_pts.append(pts)
-                    if ext_pts:
-                        p_list.append((ext_pts, furos_pts))
-                elif g_name == 'GEOMETRYCOLLECTION':
-                    for idx in range(g.GetGeometryCount()):
-                        p_list.extend(_geom_to_polys(g.GetGeometryRef(idx)))
-                return p_list
-
-            app_meta_polys = _geom_to_polys(geom_app_ideal)
-        except Exception:
-            app_meta_polys = []
-            for f in app_utm:
-                app_meta_polys.extend(f["polys"])
-    else:
+    app_meta_polys = _gerar_buffer_app(app_utm, perimetro_utm) if feicao == "app" else []
+    if feicao != "app":
         for f in app_utm:
             app_meta_polys.extend(f["polys"])
 
@@ -456,13 +438,23 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
     ax1.set_title("Hoje: a beira do rio", fontsize=12, weight="bold")
     ax2.set_title("Em dia: faixa de 30m coberta 🌳", fontsize=12, weight="bold")
 
+    res_app = geo_app.medir_app(imovel)
+    if res_app:
+        ha_decl = res_app.get("app_area_decl_ha", 0.0)
+        ha_legal = res_app.get("app_area_legal_ha", 0.0)
+        label_hoje = f"Área a recuperar: ~{ha_decl} ha"
+        label_meta = f"Área meta (30m): ~{ha_legal} ha"
+    else:
+        label_hoje = "Área que precisa de mata ciliar"
+        label_meta = est_em_dia["label"]
+
     # 6. Legendas curtas
     h1 = [plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["perimetro"]["face"],
                         edgecolor=ESTILO["perimetro"]["edge"], alpha=0.7,
                         label=ESTILO["perimetro"]["label"])]
     if imovel["app"]:
         h1.append(plt.Rectangle((0, 0), 1, 1, facecolor="none", edgecolor=est_hoje["edge"],
-                                linewidth=2.0, label="Área que precisa de mata ciliar"))
+                                linewidth=2.0, label=label_hoje))
     ax1.legend(handles=h1, loc="upper right", fontsize=8, framealpha=0.9)
 
     h2 = [plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["perimetro"]["face"],
@@ -470,7 +462,7 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
                         label=ESTILO["perimetro"]["label"])]
     if imovel["app"]:
         h2.append(plt.Rectangle((0, 0), 1, 1, facecolor=est_em_dia["face"],
-                                alpha=0.8, label=est_em_dia["label"]))
+                                alpha=0.8, label=label_meta))
     ax2.legend(handles=h2, loc="upper right", fontsize=8, framealpha=0.9)
 
     municipio = imovel["attrs"].get("municipio", "")

@@ -2343,3 +2343,96 @@ PY
 - Auditamos minuciosamente o código da API de exportação da Esri. Confirmamos que `bboxSR` e `imageSR` recebem o fuso UTM numérico correto (ex: `31982`) e o JSON do ArcGIS retorna o `extent` com chaves `xmin`, `xmax`, `ymin`, `ymax` na mesma projeção métrica.
 - O mapeamento de `extent` no `ax.imshow` respeita a ordem padrão `[xmin, xmax, ymin, ymax]` do matplotlib para os eixos (left, right, bottom, top), o que casa perfeitamente com `origin="upper"`.
 - Adicionada uma nota técnica no `README.md` relatando que quaisquer pequenos desalinhamentos residuais são típicos de diferenças de precisão de GPS na declaração original do CAR ou do processo de ortorretificação de imagens de satélite base do Esri em regiões rurais, não representando erros no código do bot.
+
+---
+
+## ACTION-023 — Hectares no Mapa e Buffer no "Em Dia" Isolado
+
+status: concluida
+tipo: codigo
+prioridade: alta
+
+### Objetivo
+
+O usuário notou duas pendências importantes para a visualização:
+1. O mapa individual "Ver como fica em dia" (gerado isoladamente antes do comparativo) não estava utilizando a lógica do "Buffer da APP Declarada" desenvolvida na ACTION-020, mostrando ainda a geometria estreita repintada.
+2. É necessário apresentar a quantidade de hectares (área) da mata ciliar diretamente nos mapas, em todos os três cenários gerados pelo bot ("Hoje", "Em dia" isolado, e "Comparativo").
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+
+### Arquivos proibidos
+
+- `.env` e afins · `data/**` · `desafio-2/**` · `.sqlite` · `.pdf`
+- `bot.py` · `conteudo.py` · `cadastro.py` · `llm.py` (só importar)
+
+### Passos
+
+1. Em `mapa.py`, refatore a lógica do "Buffer de 30m da APP Declarada" da ACTION-020 para uma função interna reutilizável (ex: `_gerar_buffer_app(imovel_app, perimetro, epsg_utm)`).
+2. Utilize essa nova função não só em `gerar_comparativo`, mas **também** em `gerar_mapa` quando `meta=True`. Isso garante que o mapa isolado "Como deve ficar" exiba o polígono "gordinho" da mesma forma que o comparativo.
+3. Importe `geo_app` dentro de `mapa.py` e chame `geo_app.medir_app(imovel)`. Extraia as métricas `app_area_decl_ha` (para mapas "Hoje") e `app_area_legal_ha` (para mapas "Em dia" / "Meta").
+4. Nas legendas (ou via anotação gráfica grande) de cada um dos mapas, inclua a metragem. Por exemplo:
+   - No mapa "Hoje" (`meta=False`): mude a legenda da APP para `"Área a recuperar: ~{app_area_decl_ha} ha"`.
+   - No mapa "Em dia" (`meta=True`): mude a legenda da APP Meta para `"Área meta (30m): ~{app_area_legal_ha} ha"`.
+   - No `gerar_comparativo`: faça o mesmo para o painel 1 (Hoje) e o painel 2 (Em dia).
+5. Certifique-se de tratar graciosamente o caso onde `medir_app` retorne `None` (exibir sem hectares).
+6. Valide gerando os três mapas para assegurar que não há quebras e que a legenda reflete o tamanho. Em seguida, **commit e push** (travas da ACTION-008). Mensagem: `Bot: aplica buffer em todos os mapas meta e exibe tamanho em hectares`.
+
+### Comandos de validação
+
+```bash
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import mapa, cadastro
+imv = cadastro.carregar_imovel(open("data/imoveis_teste.local.txt").readline().strip())
+mapa.gerar_mapa(imv, "/tmp/teste_hoje_ha.png", meta=False)
+mapa.gerar_mapa(imv, "/tmp/teste_emdia_ha.png", meta=True)
+mapa.gerar_comparativo(imv, "/tmp/teste_comparativo_ha.png")
+print("OK. Verificar se os 3 mapas possuem a area em hectares na legenda/anotacao e se o mapa em dia isolado esta com a APP espessa.")
+PY
+```
+
+### Critérios de aceite
+- Todos os 3 mapas gerados pelo bot exibem a área em hectares visualmente.
+- O mapa individual "Em dia" possui a APP com o Buffer aplicado (robusta), não apenas repintada.
+
+### Resultado do executor
+
+- Refatorada a lógica de buffer de APP para a função interna `_gerar_buffer_app` em `mapa.py`, unificando a geração de buffer para o comparativo e para o mapa individual "Em dia".
+- Integrada a chamada de `geo_app.medir_app(imovel)` para recuperar os hectares e atualizar dinamicamente a legenda em todos os cenários ("Hoje" e "Em dia"), tanto no `gerar_mapa` quanto no `gerar_comparativo`.
+- Testado e verificado que os três mapas gerados exibem corretamente a área em hectares nas legendas e o mapa individual em dia aplica a APP robusta.
+
+---
+
+## ACTION-024 — Adicionar link direto para retificação no SICAR
+
+status: concluida
+tipo: codigo
+prioridade: alta
+
+### Objetivo
+
+Para garantir que o usuário saiba exatamente *onde* realizar os ajustes, o bot deve ser proativo e fornecer o link direto de download do Módulo de Cadastro do SICAR quando estiver orientando o produtor sobre os próximos passos.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/conteudo.py`
+- `src/terra-em-dia-bot/llm.py`
+
+### Passos
+
+1. Em `conteudo.py`, localize a constante `REGRAS` e adicione uma nova diretriz ao final: `- Quando falar sobre os passos para ajustar ou retificar, sugira usar o Módulo de Cadastro no site oficial e forneça o link direto: https://car.gov.br/#/baixar`.
+2. Em `conteudo.py`, atualize a função determinística `guia_acao(an: dict)` para incluir o link. No passo de ajuste, mude para: `"2. Fazer os ajustes necessários baixando o Módulo de Cadastro no SICAR (https://car.gov.br/#/baixar)" + extra + "\n"`.
+3. Em `llm.py`, no `PROMPT_SISTEMA`, certifique-se de adicionar a orientação na lista de regras do assistente: `Sempre que orientar sobre ajustes no SICAR, inclua o link https://car.gov.br/#/baixar`.
+4. Rode o teste estático `python -m py_compile src/terra-em-dia-bot/*.py` para evitar erros de sintaxe. **Commit e push** (travas da ACTION-008). Mensagem: `Bot: inclui link oficial de download do modulo de cadastro SICAR nas orientacoes`.
+
+### Critérios de aceite
+
+- O botão "📋 Passos no SICAR" ou qualquer resposta que invoque o guia determinístico exibe o link clicável.
+- O modelo LLM é alimentado com o link no prompt para usá-lo durante a conversa livre se o usuário perguntar "onde eu arrumo isso?".
+
+### Resultado do executor
+
+- Inserido o link direto `https://car.gov.br/#/baixar` em `conteudo.py` no roteiro determinístico do `guia_acao` e na constante `REGRAS`.
+- Injetada a regra de conduta correspondente no `PROMPT_SISTEMA` (`SYSTEM`) em `llm.py` para instruir o assistente conversacional inteligente a sempre citar o link oficial ao propor ajustes no SICAR.
+- Validada a compilação e execução de testes.
