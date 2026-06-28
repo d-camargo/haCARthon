@@ -106,6 +106,7 @@
   - **Direita/canto — print do bot** (recorte vertical curto da conversa real).
 - **Texto na tela:** títulos "como está" / "como deve ficar" sobre os mapas; nada mais.
 - **Micro-destaque:** sob os mapas, uma linha: "Reserva Legal: **você declarou X · a lei pede Y · falta Z**" (preencher com os números do imóvel-demo).
+- **Caption de credibilidade (rodapé do slide, opcional, 14 pt):** "Exemplo real — Querência do Norte/PR; só nessa cidade, **83 produtores pequenos/médios** parados esperando responder" (fonte: Painel SFB, jun/2026 — ver `evidencias-pitch.md` E1c).
 
 ### Slide 6 — Diferencial
 - **Layout:** 3 cartões iguais (bege `#f5f5dc`, ícone no topo).

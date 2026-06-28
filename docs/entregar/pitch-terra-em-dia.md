@@ -32,7 +32,7 @@
 > "O Terra em Dia é um assistente de conversa, no canal que ele já confia — o Zap. O produtor manda o número do CAR. A gente lê os dados reais do imóvel dele e explica, em linguagem de gente, o que a lei pede **naquela terra**."
 
 ### Slide 5 — Como funciona (o coração) · 1:25–2:05
-**[Tela]** Os **2 mapas** lado a lado: **atual** (mata ciliar azul) → **como deve ficar** (faixa verde). Print curto da conversa do bot.
+**[Tela]** Os **2 mapas** lado a lado: **atual** (mata ciliar azul) → **como deve ficar** (faixa verde). Print curto da conversa do bot. Rodapé de credibilidade (opcional): *Exemplo real — Querência do Norte/PR; só nessa cidade, **83 produtores pequenos/médios** estão parados esperando responder.*
 **[Narração]**
 > "Funciona em quatro passos. Um: mostra o mapa do sítio e pergunta se ele sabe por que recebeu a carta — engaja antes de explicar. Dois: traduz. 'Essa é a mata da beira do rio; a lei pede trinta passos de cada lado' — e manda um segundo mapa, de como deve ficar. Na Reserva Legal, mostra o que ele declarou, o que a lei pede e quanto falta. Três: confere se ele entendeu, com uma pergunta simples. Quatro: guia até o botão do SICAR — orienta, mas quem aperta o botão é ele."
 

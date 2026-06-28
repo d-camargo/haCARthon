@@ -54,6 +54,17 @@ também. O gargalo é exatamente dele."
 **Nota:** as primeiras telas de 0–4/4–15 MF que somavam ~108 mil estavam com um filtro extra (estado)
 e foram **descartadas**; estas, só com "aguardando resposta", reconciliam com os totais.
 
+## E1c. Recorte regional — Paraná e Querência do Norte (parados, pequeno/médio)
+
+**Fonte:** Painel SFB. **Data:** 2026-06-28. Recorte: aguardando resposta + classe (MF).
+- **Paraná:** 0–4 MF = 17.892; 4–15 MF = 9.608 → **27.500 imóveis** pequeno/médio parados (~1,53 mi ha).
+- **Querência do Norte (cidade da demo):** 0–4 MF = 51; 4–15 MF = 32 → **83 imóveis** pequeno/médio
+  parados (~9,75 mil ha; RL declarada somada ~1,28 mil ha).
+
+**Uso:** ancora a demo no real — "só em Querência do Norte, **83 produtores pequenos/médios** estão
+parados esperando responder". (Sanity: o geojson local de Querência tem 548 imóveis no total; os 83 são
+o subconjunto parado — confirma o filtro "aguardando resposta".)
+
 ## E2. Validação e gargalo da resposta do proprietário (apoio aos slides 2–3)
 
 **Fonte:** transcrição da **Live 06** (tira-dúvidas com a coordenação do haCARthon), na base documental
@@ -73,8 +84,8 @@ e foram **descartadas**; estas, só com "aguardando resposta", reconciliam com o
 
 Para reforço/Q&A — pegar do mesmo painel e **registrar fonte+data aqui** antes de usar:
 - ✅ **Distribuição por tamanho do imóvel** (módulos fiscais): **feito — ver E1b** (98,4 % do CAR e 97,7 % dos parados são pequeno/médio).
-- **Análises realizadas × validadas** (quantifica o gargalo da resposta).
-- **Recorte do Paraná** (estado da demo): nº de imóveis/parados no PR localiza a história.
+- ✅ **Recorte do Paraná / Querência** (estado e cidade da demo): **feito — ver E1c** (PR: 27,5 mil; Querência: 83 parados pequeno/médio).
+- **Análises realizadas × validadas** (quantifica o gargalo da resposta) — ainda em aberto.
 - **Área a recompor / déficit ambiental** total: stakes ambientais para o slide 7 (impacto).
 - **Notificações enviadas × respondidas** (se houver): vira proxy do nosso KPI de compreensão.
 
