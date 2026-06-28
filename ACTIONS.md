@@ -2642,3 +2642,65 @@ PY
 - Ajustada a margem inferior de salvamento com `fig.subplots_adjust(bottom=0.15)`.
 - Adicionada a Seta do Norte com `transform=t` nos eixos para rotacionar dinamicamente e apontar nativamente para o Norte verdadeiro, exibindo a marcação "N" em negrito branco com fundo de contraste.
 - Validada a renderização dos mapas com sucesso.
+
+---
+
+## ACTION-029 — Refazer Seta do Norte (Alto Contraste e Coordenadas de Tela)
+
+status: concluida
+tipo: codigo
+prioridade: altissima
+
+### Objetivo
+
+O usuário ainda não consegue enxergar a Seta do Norte. A abordagem da ACTION-028 (usar `transform=t` in coordenadas Data) falhou porque no mapa comparativo o matplotlib recorta (clipa) a anotação para fora da janela, e a seta ficou fina/camuflada demais contra algumas cores de fundo de satélite. Precisamos usar coordenadas relativas da tela (`axes fraction`) para garantir que fique sempre no canto, e pintá-la de Branco com borda Preta grossa (estilo legenda de TV) para máximo contraste.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+
+### Passos
+
+1. Em `mapa.py`, remova o bloco de código que desenha a seta do norte usando `transform=t_ax` e `x_unrot`.
+2. Volte a usar coordenadas absolutas de tela (`axes fraction`) no canto superior direito:
+   ```python
+   arrow_x, arrow_y = 0.90, 0.85
+   rad_north = math.radians(theta)
+   dx = -0.06 * math.sin(rad_north)
+   dy = 0.06 * math.cos(rad_north)
+   ```
+3. Desenhe a seta (`ax.annotate`) indo de `(arrow_x, arrow_y)` para `(arrow_x + dx, arrow_y + dy)`.
+4. **Aplique Alto Contraste:** 
+   - No `arrowprops`: `facecolor="white"`, `edgecolor="black"`, `width=3`, `headwidth=10`.
+   - Remova qualquer `transform=t_ax` desta anotação (ela já usa `axes fraction`).
+5. Adicione a letra "N" na ponta da seta (`arrow_x + 1.3*dx`, `arrow_y + 1.3*dy`) usando `ax.text(...)` com `transform=ax.transAxes`. Para que o "N" branco não suma no mato claro, adicione a propriedade `bbox=dict(facecolor='black', edgecolor='none', alpha=0.5, pad=2)` e `color='white', weight='bold', fontsize=12`.
+6. Replique a solução tanto no `gerar_mapa` quanto no bloco do `gerar_comparativo`.
+7. Rode os comandos de validação e verifique os PNGs gerados.
+8. **Commit e push**. Mensagem: `Bot: refaz seta do norte com alto contraste e coordenadas de tela para evitar recorte`.
+
+### Comandos de validação
+
+```bash
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import mapa, cadastro
+imv = cadastro.carregar_imovel(open("data/imoveis_teste.local.txt").readline().strip())
+mapa.gerar_mapa(imv, "/tmp/teste_seta2.png")
+mapa.gerar_comparativo(imv, "/tmp/teste_seta2_cmp.png")
+print("OK. Inspecione visualmente se a seta aparece BEM CLARA no canto superior direito nos 3 mapas.")
+PY
+```
+
+### Critérios de aceite
+
+- O usuário consegue ver a seta "N" destacada (com borda/fundo) em qualquer cor de mapa.
+- A seta gira corretamente dependendo do ângulo $\theta$.
+- A seta nunca é cortada para fora do painel.
+
+### Resultado do executor
+
+- Removida a implementação anterior de Seta do Norte que dependia de transformações geográficas em `mapa.py`.
+- Adicionada a projeção geométrica baseada em coordenadas de tela relativas (`axes fraction`) para a flecha (`ax.annotate`) no canto superior direito `(0.90, 0.85)` estendendo-se por um raio de `0.06` projetado de acordo com o ângulo $\theta$ (Norte geográfico real).
+- Aplicadas propriedades de alto contraste: cor de preenchimento branca, borda preta com espessura de `3` e largura da cabeça de `10`.
+- Plotada a letra `"N"` na ponta da seta usando `ax.text(...)` em coordenadas `ax.transAxes`, com cor branca em negrito de tamanho `12` e uma caixa de fundo preta translúcida (`alpha=0.5`) para excelente legibilidade sobre qualquer cobertura de satélite.
+- Replicação feita em ambos os métodos `gerar_mapa` e `gerar_comparativo`.
+- Testado e verificado com sucesso.

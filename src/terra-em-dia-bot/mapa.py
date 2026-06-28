@@ -363,19 +363,28 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
     ax.set_ylim(ymin_rot, ymax_rot)
     ax.set_aspect("equal")
 
-    # Seta do Norte dinâmica usando transform=t (ACTION-028)
-    L = (xmax_rot - xmin_rot) * 0.05
-    x_rot = xmax_rot - 0.08 * (xmax_rot - xmin_rot)
-    y_rot = ymax_rot - 0.08 * (ymax_rot - ymin_rot)
-    x_unrot, y_unrot = _rotate_pt(x_rot, y_rot, cx, cy, -theta)
+    # Seta do Norte dinâmica em coordenadas de tela com alto contraste (ACTION-029)
+    arrow_x, arrow_y = 0.90, 0.85
+    rad_north = math.radians(theta)
+    dx = -0.06 * math.sin(rad_north)
+    dy = 0.06 * math.cos(rad_north)
     ax.annotate(
+        "",
+        xy=(arrow_x + dx, arrow_y + dy),
+        xytext=(arrow_x, arrow_y),
+        textcoords="axes fraction",
+        xycoords="axes fraction",
+        arrowprops=dict(facecolor="white", edgecolor="black", width=3, headwidth=10, shrink=0),
+        zorder=5
+    )
+    ax.text(
+        arrow_x + 1.3 * dx,
+        arrow_y + 1.3 * dy,
         "N",
-        xy=(x_unrot, y_unrot + L),
-        xytext=(x_unrot, y_unrot),
-        arrowprops=dict(facecolor="white", edgecolor="black", width=2, headwidth=8, shrink=0),
-        color="white", fontweight="bold", fontsize=10,
+        transform=ax.transAxes,
         ha="center", va="center",
-        transform=t,
+        fontsize=12, weight="bold", color="white",
+        bbox=dict(facecolor="black", edgecolor="none", alpha=0.5, pad=2),
         zorder=5
     )
 
@@ -605,20 +614,28 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
         for s in ax.spines.values():
             s.set_visible(False)
 
-        # Seta do Norte em cada painel usando transform (ACTION-028)
-        L = (xmax_rot - xmin_rot) * 0.05
-        x_rot = xmax_rot - 0.08 * (xmax_rot - xmin_rot)
-        y_rot = ymax_rot - 0.08 * (ymax_rot - ymin_rot)
-        x_unrot, y_unrot = _rotate_pt(x_rot, y_rot, cx, cy, -theta)
-        t_ax = t1 if ax == ax1 else t2
+        # Seta do Norte dinâmica em coordenadas de tela com alto contraste (ACTION-029)
+        arrow_x, arrow_y = 0.90, 0.85
+        rad_north = math.radians(theta)
+        dx = -0.06 * math.sin(rad_north)
+        dy = 0.06 * math.cos(rad_north)
         ax.annotate(
+            "",
+            xy=(arrow_x + dx, arrow_y + dy),
+            xytext=(arrow_x, arrow_y),
+            textcoords="axes fraction",
+            xycoords="axes fraction",
+            arrowprops=dict(facecolor="white", edgecolor="black", width=3, headwidth=10, shrink=0),
+            zorder=5
+        )
+        ax.text(
+            arrow_x + 1.3 * dx,
+            arrow_y + 1.3 * dy,
             "N",
-            xy=(x_unrot, y_unrot + L),
-            xytext=(x_unrot, y_unrot),
-            arrowprops=dict(facecolor="white", edgecolor="black", width=2, headwidth=8, shrink=0),
-            color="white", fontweight="bold", fontsize=10,
+            transform=ax.transAxes,
             ha="center", va="center",
-            transform=t_ax,
+            fontsize=12, weight="bold", color="white",
+            bbox=dict(facecolor="black", edgecolor="none", alpha=0.5, pad=2),
             zorder=5
         )
 
