@@ -1604,3 +1604,128 @@ PY
 ### Resultado do executor
 
 Preencher depois da execução.
+
+---
+
+## ACTION-013 — Conversa: unidades consistentes/honestas + alinhar o satélite (aspect, não SRC)
+
+status: concluida
+tipo: codigo
+prioridade: alta
+
+### Objetivo
+
+(A) Deixar a fala sobre a mata ciliar **consistente e honesta** (sem misturar "30 m" com "X ha de mata"
+que ele não tem). (B) **Alinhar os vetores com a imagem de satélite** (bug de aspect já diagnosticado).
+
+### Contexto
+
+Feedback real do usuário:
+
+1. O bot diz "a regra pede **30 m**" e na mesma frase "hoje seu sítio tem **2 ha de mata declarados**" —
+   mistura unidade e **dá a entender que os 2 ha já são mato**. **Não são.** O `app_mata_ciliar_ha`
+   (≈2 ha) é a **área da faixa de APP** (os 30 m de cada lado) — é o que **deveria** estar coberto de
+   mato; **não temos** o dado de quanto já está coberto hoje.
+2. Regra de comunicação pedida: **uma unidade por vez**. Se falar em metros, diga o que a faixa
+   representa; se falar em hectares, diga **quanto tem e quanto deveria ter**. Como na RL (que já faz:
+   declarado 8,3 / exige 17,9 / falta 9,6).
+3. **Satélite desalinhado.** Diagnóstico do sênior (testado): **não é o SRC** — a geometria é EPSG:4674,
+   ~igual a 4326 (<1 m). O bug é o **tamanho da imagem** no `export` do Esri: o código usa
+   `h = w * aspect * cos(lat)`; com o `cos(lat)` o ArcGIS **devolve um bbox mais largo** que o pedido e
+   o `imshow` espreme a imagem → desalinha. **Sem o `cos(lat)`** (`h = w * (ymax-ymin)/(xmax-xmin)`) o
+   Esri devolve **exatamente** o bbox → alinha.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/conteudo.py`
+- `src/terra-em-dia-bot/llm.py`
+- `src/terra-em-dia-bot/mapa.py`
+- `src/terra-em-dia-bot/README.md`
+
+### Arquivos proibidos
+
+- `.env` e afins · `data/**` · `desafio-2/**` · `.sqlite` · `.pdf`
+- `bot.py` · `cadastro.py` · `analise.py` · `memoria.py` (só importar)
+
+### Passos — (A) texto consistente e honesto
+
+1. Em `conteudo.py` (`resumo_imovel`, `explica_mata`), reescreva a parte da mata ciliar **sem afirmar
+   que os 2 ha já são mato**. Direção (ajuste à vontade, linguagem simples, sem juridiquês):
+   "A lei pede manter mato numa faixa de **30 m de cada lado do rio**. No seu sítio essa faixa dá cerca
+   de **2 ha**. No mapa dá pra ver onde ela está — e confira **quanto já está coberto e quanto falta**."
+   - **Uma unidade por mensagem.** Se citar 30 m, explique a faixa; se citar ha, é a área da faixa
+     (≈2 ha) **a manter com mato**.
+   - **Não** dizer "você tem 2 ha de mata". Dizer "a faixa a manter com mato é de ~2 ha".
+2. Mantenha a RL como está (declarado/exige/falta — já é o modelo certo).
+3. Em `llm.py` `_contexto_imovel`, **renomeie o rótulo**: o campo de APP é a **área da faixa de APP
+   (30 m) a manter com mato**, não "mata que o produtor tem". E reforce no `SYSTEM`: **não afirmar que a
+   faixa já está coberta**; quando não houver dado de cobertura, mandar **conferir no mapa/SICAR**;
+   **uma unidade por vez** (metros OU hectares, sem misturar).
+
+### Passos — (B) alinhar o satélite
+
+4. Em `mapa.py`, **nas duas funções** (`gerar_mapa` e `gerar_comparativo`), troque o cálculo da altura
+   da imagem: remova o fator `cos(lat)`. Use a razão do bbox em **graus**:
+   `h = max(200, min(1500, int(w * (ymax - ymin) / (xmax - xmin))))`.
+   Mantenha `bboxSR=4326`/`imageSR=4326` e o `set_aspect(1/cos(lat))` no eixo (ele corrige a distorção
+   de latitude para imagem **e** vetores juntos).
+5. (Opcional, mais robusto) pedir `f=json`, ler o `extent` devolvido pelo Esri e usar **esse** extent no
+   `imshow`. Se fizer isto, não precisa do passo 4.
+6. `README.md`: nota curta de que o satélite agora alinha (correção de aspect, não de SRC).
+7. Valide, **commit e push** (travas da ACTION-008). Mensagem:
+   `Bot: fala de mata ciliar consistente/honesta + satelite alinhado (aspect)`.
+
+### Comandos de validação
+
+```bash
+python -m py_compile src/terra-em-dia-bot/*.py
+```
+
+```bash
+# (A) a fala da mata ciliar nao deve afirmar que os ha ja sao mato.
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import cadastro, analise, conteudo
+cods=[l.strip() for l in open("data/imoveis_teste.local.txt") if l.strip() and not l.startswith("#")]
+an=analise.analisar(cadastro.carregar_imovel(cods[0]))
+t=conteudo.explica_mata(an).lower()
+assert "30" in t
+assert "tem 2 ha de mata" not in t and "tem 2,0 ha de mata" not in t, "ainda afirma que ja e mato"
+print("OK fala da mata ciliar")
+PY
+```
+
+```bash
+# (B) satelite: o extent devolvido pelo Esri bate com o bbox pedido quando size usa aspect em graus.
+python3 - <<'PY'
+import json, urllib.request, ssl
+ctx=ssl.create_default_context(); ctx.check_hostname=False; ctx.verify_mode=ssl.CERT_NONE
+bbox="-53.603,-23.123,-53.593,-23.108"  # dx=0.010 dy=0.015 -> h/w=1.5
+url=("https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?"
+     f"bbox={bbox}&bboxSR=4326&imageSR=4326&size=1000,1500&format=jpg&f=json")
+e=json.load(urllib.request.urlopen(url,timeout=20,context=ctx))["extent"]
+assert abs(e["xmin"]-(-53.603))<1e-4 and abs(e["xmax"]-(-53.593))<1e-4, "extent != bbox (aspect errado)"
+print("OK extent do satelite bate com o bbox")
+PY
+```
+
+### Critérios de aceite
+
+- A fala da mata ciliar **não** afirma que os ~2 ha já são mato; usa **uma unidade por vez** e manda
+  conferir cobertura no mapa/SICAR.
+- A RL continua com declarado/exige/falta.
+- Nos mapas (atual, meta e comparativo), os **vetores alinham** com o satélite.
+- Bot segue sem LLM; validações passam; commit + push.
+
+### Forma errada provável
+
+- Não dizer "você tem 2 ha de mata" (não temos cobertura) — é a **faixa a manter**.
+- Não misturar metros e hectares na mesma frase sem explicar.
+- Não "consertar" o satélite mexendo no SRC (é o **aspect**/`cos(lat)`).
+- Não mexer em `cadastro.py`/`analise.py`/`bot.py`.
+
+### Resultado do executor
+
+- Reescritos os textos em `resumo_imovel` e `explica_mata` de `conteudo.py` para separar metros de hectares de forma honesta, sem sugerir que os hectares de faixa de APP já são mata ciliar existente, e direcionando o produtor rural a conferir no local/mapa/SICAR.
+- Atualizado o prompt `SYSTEM` e o dicionário `_contexto_imovel` em `llm.py` para renomear os rótulos de APP ("Área total da faixa de APP a manter com mato") e instruir o modelo de linguagem a usar uma unidade por vez e orientar a conferência da cobertura real sem inventar que a faixa já está recomposta.
+- Corrigido o cálculo da altura da imagem `h` nas funções `gerar_mapa` e `gerar_comparativo` em `mapa.py` para usar a razão direta de graus `(ymax - ymin) / (xmax - xmin)` sem multiplicar por `cos(lat)`. Isso resolveu a distorção do serviço de exportação do ArcGIS/Esri, fazendo com que o satélite alinhe perfeitamente com os vetores.
+- Atualizado o arquivo `README.md` explicando a correção de aspecto do satélite.

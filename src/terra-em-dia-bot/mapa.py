@@ -79,8 +79,7 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
     try:
         w = 1000
         aspect = (ymax - ymin) / (xmax - xmin) if (xmax - xmin) > 0 else 1.0
-        aspect_corr = aspect * cos(radians((ymin + ymax) / 2))
-        h = max(200, min(1500, int(w * aspect_corr)))
+        h = max(200, min(1500, int(w * aspect)))
         
         params = {
             "bbox": f"{xmin},{ymin},{xmax},{ymax}",
@@ -171,8 +170,7 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
     try:
         w = 1000
         aspect = (ymax - ymin) / (xmax - xmin) if (xmax - xmin) > 0 else 1.0
-        aspect_corr = aspect * cos(radians((ymin + ymax) / 2))
-        h = max(200, min(1500, int(w * aspect_corr)))
+        h = max(200, min(1500, int(w * aspect)))
         
         params = {
             "bbox": f"{xmin},{ymin},{xmax},{ymax}",

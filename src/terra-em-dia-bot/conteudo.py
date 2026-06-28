@@ -52,8 +52,9 @@ def resumo_imovel(an: dict) -> str:
     # 1. Mata Ciliar (APP)
     if an.get("tem_app"):
         partes.append(
-            f"Na *beira do rio*, a regra pede uma faixa de *{an['faixa_app_m']} metros* de cada lado para proteger a água. "
-            f"Hoje seu sítio tem *{_n(an['app_mata_ciliar_ha'])} ha* de mata declarados nessa beira."
+            f"Na *beira do rio*, a lei pede para manter o mato numa faixa de *{an['faixa_app_m']} metros* de cada lado. "
+            f"No seu sítio, essa faixa dá cerca de *{_n(an['app_mata_ciliar_ha'])} ha*. No mapa dá para ver onde ela fica — "
+            "aí vale a pena olhar lá na terra quanto já está coberto de mato e quanto falta."
         )
     else:
         partes.append(
@@ -89,8 +90,9 @@ def explica_mata(an: dict) -> str:
         return (
             "A *mata ciliar* é aquela vegetação que fica na beira do rio, funcionando "
             "como os cílios dos nossos olhos para proteger a água.\n"
-            f"No seu sítio, a lei pede para guardar uma faixa de *{an['faixa_app_m']} metros* de cada lado. "
-            f"O seu cadastro mostra *{_n(an['app_mata_ciliar_ha'])} ha* de área declarada na beira do rio."
+            f"A lei pede para manter o mato numa faixa de *{an['faixa_app_m']} metros* de cada lado do rio. "
+            f"No seu sítio, essa faixa dá cerca de *{_n(an['app_mata_ciliar_ha'])} ha*. No mapa dá para ver onde ela fica — "
+            "aí vale a pena olhar lá na terra quanto já está coberto de mato e quanto falta."
         )
     return (
         "A *mata ciliar* é aquela vegetação que fica na beira do rio, funcionando "
