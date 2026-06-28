@@ -118,9 +118,27 @@ def _teclado_solucao() -> InlineKeyboardMarkup:
     keyboard = [
         [InlineKeyboardButton("🌳 Ver como fica em dia", callback_data="sol")],
         [InlineKeyboardButton("🔍 Comparar agora × depois", callback_data="cmp")],
-        [InlineKeyboardButton("📋 Passos no SICAR", callback_data="sicar")]
+        [InlineKeyboardButton("📋 Passos no SICAR", callback_data="sicar")],
+        [InlineKeyboardButton("❓ Responder 2 perguntas rápidas", callback_data="quiz:0")],
     ]
     return InlineKeyboardMarkup(keyboard)
+
+
+def _teclado_pergunta(idx: int) -> InlineKeyboardMarkup:
+    p = conteudo.PERGUNTAS[idx]
+    keyboard = [
+        [InlineKeyboardButton(txt, callback_data=f"resp:{idx}:{i}")]
+        for i, (txt, _ok) in enumerate(p["opcoes"])
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+async def _enviar_pergunta(context: ContextTypes.DEFAULT_TYPE, chat_id: int, idx: int) -> None:
+    p = conteudo.PERGUNTAS[idx]
+    await context.bot.send_message(
+        chat_id=chat_id, text=p["texto"], parse_mode=MD,
+        reply_markup=_teclado_pergunta(idx),
+    )
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -193,6 +211,30 @@ async def botao(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     an = context.user_data["an"]
 
     data = query.data
+
+    # Perguntas de checagem: "quiz:<idx>" inicia; "resp:<idx>:<opcao>" responde.
+    if data.startswith("quiz:"):
+        idx = int(data.split(":")[1])
+        await _enviar_pergunta(context, update.effective_chat.id, idx)
+        return
+    if data.startswith("resp:"):
+        _, sidx, sopt = data.split(":")
+        idx, opt = int(sidx), int(sopt)
+        p = conteudo.PERGUNTAS[idx]
+        _texto, acertou = p["opcoes"][opt]
+        tentativas = context.user_data.get("tentativas", 0) + 1
+        context.user_data["tentativas"] = tentativas
+        memoria.atualizar(_user_id(update), tentativas=tentativas)
+        metricas.registrar(_user_id(update), acertou, tentativas)
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=p["certo"] if acertou else p["errado"],
+            parse_mode=MD,
+        )
+        if idx + 1 < len(conteudo.PERGUNTAS):
+            await _enviar_pergunta(context, update.effective_chat.id, idx + 1)
+        return
+
     if data == "sol":
         await _enviar_mapa(update, context, imovel, "meta", conteudo.CAPTION_META)
         keyboard = [[InlineKeyboardButton("🔍 Comparar agora × depois", callback_data="cmp")]]
@@ -261,6 +303,13 @@ async def conversa_livre(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     return CONVERSA
 
 
+async def pergunta_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if "imovel" not in context.user_data and not _restaurar_contexto(update, context):
+        await update.message.reply_text("Por favor, me mande primeiro o número do seu CAR ou a foto da carta.")
+        return
+    await _enviar_pergunta(context, update.effective_chat.id, 0)
+
+
 async def metricas_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     r = metricas.resumo()
     await update.message.reply_text(
@@ -294,6 +343,7 @@ def main() -> None:
                 CommandHandler("mapa", mapa_cmd),
                 CommandHandler("comofica", comofica_cmd),
                 CommandHandler("mapadepois", comofica_cmd),
+                CommandHandler("pergunta", pergunta_cmd),
                 MessageHandler(texto, conversa_livre)
             ],
         },
@@ -301,6 +351,7 @@ def main() -> None:
     )
     app.add_handler(conversa)
     app.add_handler(CommandHandler("metricas", metricas_cmd))
+    app.add_handler(CommandHandler("pergunta", pergunta_cmd))
     app.add_handler(CommandHandler("mapa", mapa_cmd))
     app.add_handler(CommandHandler("comofica", comofica_cmd))
     app.add_handler(CommandHandler("mapadepois", comofica_cmd))

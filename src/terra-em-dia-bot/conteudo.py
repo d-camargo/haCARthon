@@ -169,6 +169,55 @@ REEXPLICA = (
 )
 
 
+# Perguntas de checagem (despretensiosas, não é quiz de prova). Cada uma vira
+# métrica de compreensão (acertou = entendeu). Uma sobre mata ciliar (APP) e
+# outra sobre Reserva Legal (RL). `opcoes` = lista de (texto, é_a_certa?).
+PERGUNTAS = [
+    {
+        "tema": "app",
+        "texto": (
+            "Deixa eu te fazer uma pergunta rápida, Seu Raimundo 😊\n\n"
+            "*Você entende por que sua propriedade precisa dos 30 metros de mato "
+            "na beira do rio?*"
+        ),
+        "opcoes": [
+            ("Pra proteger a água e segurar o barranco", True),
+            ("Só pra cumprir uma regra do governo", False),
+            ("Não sei bem, me explica de novo", False),
+        ],
+        "certo": (
+            "Isso mesmo! Esse mato protege a água e segura a terra quando chove "
+            "forte. É a sua propriedade ganhando proteção."
+        ),
+        "errado": (
+            "Sem problema, vou te explicar. O motivo é bem prático: esse mato na "
+            "beira do rio protege a água e segura o barranco quando chove forte. "
+            "Por isso a lei pede os 30 metros."
+        ),
+    },
+    {
+        "tema": "rl",
+        "texto": (
+            "Mais uma, bem rapidinha 😊\n\n"
+            "*E a Reserva Legal: você sabe o que ela é?*"
+        ),
+        "opcoes": [
+            ("Um pedaço da terra que fica guardado com mato nativo", True),
+            ("Uma área que o governo vai tomar de mim", False),
+            ("Não entendi, me explica de novo", False),
+        ],
+        "certo": (
+            "Exato! A Reserva Legal continua sendo sua. É só uma parte do sítio "
+            "que fica guardada com mato nativo."
+        ),
+        "errado": (
+            "Fica tranquilo. A Reserva Legal continua sendo sua terra — ninguém "
+            "toma. É só uma parte do sítio que fica guardada com mato nativo."
+        ),
+    },
+]
+
+
 def guia_acao(an: dict) -> str:
     falta_rl = an["tem_rl"] and an["rl_deficit_ha"] > 0
     extra = (

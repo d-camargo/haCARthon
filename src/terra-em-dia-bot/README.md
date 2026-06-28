@@ -31,10 +31,13 @@ Ao carregar um imóvel do CAR, o bot oferece proativamente botões interativos p
 - 🌳 **Ver como fica em dia:** Envia o mapa-meta de como a beira do rio/reserva deve ficar.
 - 🔍 **Comparar agora × depois:** Envia um comparativo visual com dois painéis lado a lado, dando **zoom automático** focado diretamente na beira do rio (APP) para manter as faixas nítidas e visíveis. A Reserva Legal, por não possuir demarcação geométrica futura pré-definida, é informada de maneira transparente via texto/anotação na conversa para evitar dados fictícios.
 - 📋 **Passos no SICAR:** Manda o passo a passo resumido do que fazer.
+- ❓ **Responder 2 perguntas rápidas:** Duas perguntas despretensiosas de checagem (uma sobre a mata ciliar/APP e outra sobre a Reserva Legal), cada uma com opções de resposta em botões. O acerto alimenta o KPI de compreensão (ver `/metricas`).
 
 **Atalhos e Comandos (para fallback/uso direto):**
 - **Mapa atual (Situação hoje):** Envie mensagens naturais como `"me manda o mapa"`, `"quero ver o mapa"` ou use o comando `/mapa`.
 - **Mapa meta (Como deve ficar):** Envie mensagens naturais como `"como deve ficar?"`, `"como fica depois?"`, `"o certo"`, `"depois"` ou use o comando `/comofica` (ou `/mapadepois`).
+
+- **Perguntas de checagem:** use o comando `/pergunta` (ou o botão "❓ Responder 2 perguntas rápidas") para disparar as duas perguntas de compreensão (APP e RL).
 
 Use o comando `/metricas` para ver a eficácia de compreensão acumulada (KPI).
 

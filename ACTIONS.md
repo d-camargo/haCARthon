@@ -3067,4 +3067,44 @@ PY
   `/tmp/seta_unico_meta.png`, `/tmp/seta_cmp.png`) mostram a seta **inteira**,
   fora do mapa, sem corte, apontando pro norte. Verificação visual feita pelo
   senior (o junior parou antes de fechar o registro).
-- Pendente: commit (aguardando ok do usuário).
+- Commit `ddc7933` em main e push concluídos.
+
+---
+
+## ACTION-034 — Perguntas de checagem (APP e RL) com botões
+
+status: concluida
+tipo: codigo
+prioridade: alta
+
+### Objetivo
+
+Adicionar duas perguntas despretensiosas de compreensão (uma sobre mata
+ciliar/APP e outra sobre Reserva Legal), com opções em botões, alimentando o
+KPI de compreensão existente.
+
+### Contexto
+
+Executada diretamente pelo senior (o executor junior ficou indisponível). É o
+momento "confere o entendimento" previsto no CLAUDE.md — pergunta leve, não
+quiz de prova.
+
+### Arquivos alterados
+
+- `src/terra-em-dia-bot/conteudo.py`
+- `src/terra-em-dia-bot/bot.py`
+- `src/terra-em-dia-bot/README.md`
+
+### Resultado do executor
+
+- `conteudo.py`: nova lista `PERGUNTAS` (tema `app` e `rl`), cada uma com
+  `texto`, `opcoes` (texto + flag de correta), `certo` e `errado`.
+- `bot.py`: `_teclado_pergunta(idx)` e `_enviar_pergunta(...)`; tratamento dos
+  callbacks `quiz:<idx>` (inicia) e `resp:<idx>:<opcao>` (responde) em `botao`,
+  registrando a métrica via `metricas.registrar(user, acertou, tentativas)` e
+  encadeando a 2ª pergunta após a 1ª. Botão "❓ Responder 2 perguntas rápidas"
+  no teclado da solução e comando `/pergunta`.
+- `README.md`: documentado o botão, o `/pergunta` e a ligação com o KPI.
+- Validado: `py_compile` OK e teste de estrutura de `PERGUNTAS` (2 perguntas,
+  temas app/rl, exatamente 1 opção correta por pergunta, callback_data ≤ 64 b).
+  Não subi o bot (depende do token local no `.env`).
