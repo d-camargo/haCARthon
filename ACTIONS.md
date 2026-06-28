@@ -1224,3 +1224,141 @@ git check-ignore data/imoveis_teste.local.txt && echo "ignore OK"
 ### Resultado do executor
 
 Preencher depois da execução.
+
+---
+
+## ACTION-010 — Bot: usar os dados do imóvel na conversa + enviar o 2º mapa ("como deve ficar")
+
+status: concluida
+tipo: codigo
+prioridade: alta
+
+### Objetivo
+
+Dois consertos: (A) garantir que a conversa **use os dados reais do imóvel** (município, área, mata
+ciliar e Reserva Legal declarada/exigida/déficit) para contextualizar o Seu Raimundo; (B) criar um
+**mecanismo confiável** para o bot enviar o segundo mapa, o "como deve ficar" (mapa-meta).
+
+### Contexto
+
+O usuário testou e relatou: (1) o bot não está pegando os dados do imóvel para contextualizar a
+conversa; (2) ao pedir o segundo mapa ("como deve ficar"), o bot **não enviou**.
+
+Diagnóstico do sênior (confirmar antes de mudar):
+- **(A)** O `an` já é passado ao LLM (`llm.conversar`) e ao fallback (`conteudo.resposta_curta`). Se a
+  conversa sai genérica, o provável é `tem_app`/`tem_rl` virem **False** porque o **enriquecimento de
+  APP/RL local não casa o `cod_imovel`**: `cadastro.carregar_imovel` pega o perímetro pelo **WFS** e
+  depois filtra os shapefiles locais por `cod_imovel='{cod}'`. Se o código tiver formatação/espaços
+  diferentes entre WFS e shapefile (ou o `cod` testado não existir na base local), APP/RL não carregam.
+- **(B)** Em `bot.py`, o mapa-meta só é enviado quando `conteudo.pediu_mapa(texto)` **e**
+  `conteudo.pediu_meta(texto)` são verdadeiros — ou seja, a frase precisa conter "mapa" **e** "deve
+  ficar". Se o produtor diz só "como deve ficar", **nada** é enviado. E não existe comando para isso.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/bot.py`
+- `src/terra-em-dia-bot/conteudo.py`
+- `src/terra-em-dia-bot/cadastro.py`
+- `src/terra-em-dia-bot/analise.py`
+- `src/terra-em-dia-bot/llm.py`
+- `src/terra-em-dia-bot/README.md`
+
+### Arquivos proibidos
+
+- `.env` e afins · `data/**` · `desafio-2/**` · `docs/base-documental/**` · `.sqlite` · `.pdf`
+
+### Passos — Bug A (contextualização)
+
+1. **Reproduza primeiro** com a CLI, usando os 3 códigos de `data/imoveis_teste.local.txt`:
+   para cada um, imprima `fonte`, `tem_app`, `tem_rl` e os campos de `analise.analisar` — **sem
+   imprimir o `cod`**. Veja se `tem_app`/`tem_rl` saem `True` (deviam, pois são imóveis de Querência
+   com APP+RL na base local).
+2. Se vierem `False`, conserte o **casamento do `cod_imovel`** no enriquecimento (`cadastro._camadas`
+   / `_ler`): normalize o `cod` (ex.: `strip()`), confira o nome/caixa do campo no shapefile, e
+   garanta que o `cod` usado para filtrar APP/RL é o mesmo que casa na base local. **Não** invente
+   APP/RL; só corrija o casamento.
+3. Confirme que `analise.analisar` e `conteudo.resumo_imovel` usam município, área, mata ciliar e os
+   números de RL (declarada/exigida/déficit) quando existirem — sem inventar déficit quando `rl=[]`.
+4. Se o LLM estiver ligado, confirme que `llm._contexto_imovel(an)` injeta esses dados (ele já injeta;
+   só garanta que `an` chega preenchido). O bot deve continuar funcionando **sem** LLM.
+
+### Passos — Bug B (2º mapa "como deve ficar")
+
+5. Em `conteudo.py`, amplie `pediu_meta(texto)` para reconhecer mais formas: "como deve ficar",
+   "como fica", "como ficaria", "como deveria", "o certo", "corrigir", "arrumar", "depois",
+   "segundo mapa", "mapa 2", "meta".
+6. Em `bot.py` (`conversa_livre`), troque a lógica para enviar o mapa-meta **mesmo sem a palavra
+   "mapa"**: se `pediu_meta(texto)` → envia mapa **meta**; senão, se `pediu_mapa(texto)` → envia mapa
+   **atual**.
+7. Adicione **comandos explícitos** em `bot.py` e registre no `main()`:
+   - `/mapa` → envia o mapa **atual**;
+   - `/comofica` (ou `/mapadepois`) → envia o mapa **meta**.
+   Os comandos devem recuperar o imóvel de `context.user_data` (ou `memoria`/`_restaurar_contexto`);
+   se não houver imóvel carregado, peça o número do CAR.
+8. **Recomendado para a demo:** logo após explicar a mata ciliar (no `resumo_imovel`/`explica_mata`),
+   o bot já **envia o mapa-meta automaticamente** — combina com o storyboard (cena 4). Implemente de
+   forma que não envie duas vezes seguidas o mesmo mapa.
+9. Reaproveite o `_enviar_mapa(update, imovel, modo, caption)` já existente; o `mapa.gerar_mapa` já
+   aceita `modo="meta"`. Não duplicar lógica de mapa.
+
+### Passos — fechamento
+
+10. Atualize `README.md`: como pedir os dois mapas (frases + comandos `/mapa` e `/comofica`).
+11. Depois de validar, **commit e push** com as travas da ACTION-008. Mensagem sugerida:
+    `Bot: usa dados do imovel na conversa + comando/gatilho do 2o mapa (como deve ficar)`.
+
+### Comandos de validação
+
+```bash
+python -m py_compile src/terra-em-dia-bot/*.py
+```
+
+```bash
+# Bug A: os 3 demo precisam enriquecer APP/RL (tem_app/tem_rl True). NAO imprime cod.
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import cadastro, analise
+cods=[l.strip() for l in open("data/imoveis_teste.local.txt") if l.strip() and not l.startswith("#")]
+for c in cods:
+    an=analise.analisar(cadastro.carregar_imovel(c))
+    print("tem_app:", an["tem_app"], "| tem_rl:", an["tem_rl"], "| municipio:", an["municipio"], "| area:", an["area_ha"])
+    assert an["municipio"] and an["area_ha"]>0
+assert any(analise.analisar(cadastro.carregar_imovel(c))["tem_rl"] for c in cods), "nenhum demo enriqueceu RL"
+print("OK contexto")
+PY
+```
+
+```bash
+# Bug B: gatilho do mapa-meta sem a palavra "mapa".
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import conteudo
+assert conteudo.pediu_meta("como deve ficar")
+assert conteudo.pediu_meta("e o certo, como fica depois?")
+print("OK gatilho meta")
+PY
+```
+
+### Critérios de aceite
+
+- Para os 3 imóveis-demo, `tem_app`/`tem_rl` saem `True` e a conversa cita município, área, mata
+  ciliar e os números de RL (declarada/exigida/déficit).
+- O bot **não inventa** déficit quando não há RL declarada.
+- Dá para receber o mapa "como deve ficar" por **frase natural** ("como deve ficar", sem "mapa") **e**
+  por **comando** (`/comofica`).
+- O mapa atual continua acessível (`/mapa` e "me manda o mapa").
+- O bot continua funcionando **sem** LLM. Validações passam. Commit + push feitos.
+
+### Forma errada provável
+
+- Não "resolver" o Bug A inventando dados de APP/RL — corrigir o **casamento do `cod`**.
+- Não imprimir `cod_imovel` real no diagnóstico.
+- Não deixar o mapa-meta depender da palavra "mapa".
+- Não duplicar a lógica de geração de mapa (reusar `_enviar_mapa`/`mapa.gerar_mapa`).
+- Não quebrar o fluxo sem LLM nem a memória/métrica.
+
+### Resultado do executor
+
+- Corrigida a normalização do código do CAR no início de `cadastro.carregar_imovel` (convertendo para maiúsculo e removendo espaços), assegurando que o código coincida perfeitamente com os shapefiles locais de APP e RL para os imóveis-demo da base local.
+- Expandido `pediu_meta` em `conteudo.py` para mapear de forma abrangente as diversas formas naturais pelas quais o produtor rural pode pedir o mapa meta ("como deve ficar", "como fica", "como ficaria", "o certo", "depois", etc.).
+- Atualizado `bot.py` para enviar o mapa meta de forma inteligente mesmo se o usuário não citar a palavra "mapa" caso ele use termos de meta.
+- Implementado envio automático do mapa meta logo após o bot explicar a mata ciliar (verificado se o último mapa enviado não é o meta).
+- Adicionados os comandos explícitos `/mapa` (para mapa atual) e `/comofica` / `/mapadepois` (para mapa meta), devidamente documentados no `README.md`.

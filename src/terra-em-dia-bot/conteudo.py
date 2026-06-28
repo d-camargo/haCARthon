@@ -219,7 +219,22 @@ def pediu_mapa(texto: str) -> bool:
 
 def pediu_meta(texto: str) -> bool:
     t = _normaliza(texto)
-    return any(p in t for p in ["deve ficar", "certo", "corrigir", "arrumar", "meta"])
+    return any(
+        p in t
+        for p in [
+            "deve ficar",
+            "como fica",
+            "como ficaria",
+            "como deveria",
+            "o certo",
+            "corrigir",
+            "arrumar",
+            "depois",
+            "segundo mapa",
+            "mapa 2",
+            "meta",
+        ]
+    )
 
 _PALAVRAS_OK = [
     "agua", "proteg", "barranc", "eros", "rio", "nascente", "enchente",

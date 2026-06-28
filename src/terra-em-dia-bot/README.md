@@ -24,7 +24,13 @@ cp .env.example .env                    # preencha:
 python bot.py
 ```
 
-No Telegram, abra seu bot e mande `/start`. Use `/metricas` pra ver o KPI.
+No Telegram, abra seu bot e mande `/start`.
+
+**Como pedir os mapas no bot:**
+- **Mapa atual (Situação hoje):** Envie mensagens naturais como `"me manda o mapa"`, `"quero ver o mapa"` ou use o comando `/mapa`.
+- **Mapa meta (Como deve ficar):** Envie mensagens naturais como `"como deve ficar?"`, `"como fica depois?"`, `"o certo"`, `"depois"` ou use o comando `/comofica` (ou `/mapadepois`).
+
+Use o comando `/metricas` para ver a eficácia de compreensão acumulada (KPI).
 
 ## Demonstração e Simulação
 

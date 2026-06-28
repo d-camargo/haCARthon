@@ -81,7 +81,7 @@ def _restaurar_contexto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> b
     return True
 
 
-async def _enviar_mapa(update, imovel, modo, caption):
+async def _enviar_mapa(update, context, imovel, modo, caption):
     await update.message.chat.send_action(ChatAction.UPLOAD_PHOTO)
     tmp_nome = None
     try:
@@ -90,6 +90,7 @@ async def _enviar_mapa(update, imovel, modo, caption):
         mapa.gerar_mapa(imovel, tmp_nome, modo=modo)
         with open(tmp_nome, "rb") as fp:
             await update.message.reply_photo(photo=fp, caption=caption)
+        context.user_data["ultimo_mapa"] = modo
     except Exception as e:  # mapa é um plus; não derruba a conversa
         logger.warning("falha ao gerar mapa (%s): %s", modo, e)
     finally:
@@ -128,9 +129,25 @@ async def _apresentar(update, context, imovel) -> int:
     memoria.atualizar(_user_id(update), cod=imovel["cod"], tentativas=0, historico=[])
 
     await update.message.reply_text(conteudo.VENDO_CADASTRO)
-    await _enviar_mapa(update, imovel, "atual", conteudo.CAPTION_ATUAL)
+    await _enviar_mapa(update, context, imovel, "atual", conteudo.CAPTION_ATUAL)
     await update.message.reply_text(conteudo.resumo_imovel(an), parse_mode=MD)
     return CONVERSA
+
+
+async def mapa_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if "imovel" not in context.user_data and not _restaurar_contexto(update, context):
+        await update.message.reply_text("Por favor, me mande primeiro o número do seu CAR ou a foto da carta.")
+        return
+    imovel = context.user_data["imovel"]
+    await _enviar_mapa(update, context, imovel, "atual", conteudo.CAPTION_ATUAL)
+
+
+async def comofica_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if "imovel" not in context.user_data and not _restaurar_contexto(update, context):
+        await update.message.reply_text("Por favor, me mande primeiro o número do seu CAR ou a foto da carta.")
+        return
+    imovel = context.user_data["imovel"]
+    await _enviar_mapa(update, context, imovel, "meta", conteudo.CAPTION_META)
 
 
 async def conversa_livre(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -148,10 +165,18 @@ async def conversa_livre(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.chat.send_action(ChatAction.TYPING)
     resp = llm.conversar(hist, an) or conteudo.resposta_curta(texto, an)
 
-    if conteudo.pediu_mapa(texto):
-        modo = "meta" if conteudo.pediu_meta(texto) else "atual"
-        caption = conteudo.CAPTION_META if modo == "meta" else conteudo.CAPTION_ATUAL
-        await _enviar_mapa(update, context.user_data.get("imovel"), modo, caption)
+    enviar_meta = conteudo.pediu_meta(texto)
+    enviar_atual = conteudo.pediu_mapa(texto)
+
+    # Envio automático do mapa meta quando explica a mata ciliar
+    if any(p in conteudo._normaliza(texto) for p in ["mata", "ciliar", "app", "rio", "beira"]):
+        if context.user_data.get("ultimo_mapa") != "meta":
+            enviar_meta = True
+
+    if enviar_meta:
+        await _enviar_mapa(update, context, context.user_data.get("imovel"), "meta", conteudo.CAPTION_META)
+    elif enviar_atual:
+        await _enviar_mapa(update, context, context.user_data.get("imovel"), "atual", conteudo.CAPTION_ATUAL)
 
     if conteudo.compreendeu(texto):
         tentativas = context.user_data.get("tentativas", 0) + 1
@@ -194,12 +219,20 @@ def main() -> None:
         states={
             AGUARDA_CAR: [MessageHandler(filters.PHOTO, recebeu_foto),
                           MessageHandler(texto, recebeu_car)],
-            CONVERSA: [MessageHandler(texto, conversa_livre)],
+            CONVERSA: [
+                CommandHandler("mapa", mapa_cmd),
+                CommandHandler("comofica", comofica_cmd),
+                CommandHandler("mapadepois", comofica_cmd),
+                MessageHandler(texto, conversa_livre)
+            ],
         },
         fallbacks=[CommandHandler("cancel", cancel), CommandHandler("start", start)],
     )
     app.add_handler(conversa)
     app.add_handler(CommandHandler("metricas", metricas_cmd))
+    app.add_handler(CommandHandler("mapa", mapa_cmd))
+    app.add_handler(CommandHandler("comofica", comofica_cmd))
+    app.add_handler(CommandHandler("mapadepois", comofica_cmd))
     app.add_handler(MessageHandler(filters.PHOTO, recebeu_foto))
     app.add_handler(MessageHandler(texto, conversa_livre))
 

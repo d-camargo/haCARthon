@@ -66,6 +66,7 @@ def carregar_imovel(cod: str) -> dict | None:
     """Junta perímetro + APP + RL do imóvel. Tenta WFS online primeiro, depois local."""
     import wfs_car
     
+    cod = (cod or "").strip().upper()
     perimetro, attrs = None, None
     fonte = "wfs"
     
