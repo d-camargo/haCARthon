@@ -370,7 +370,7 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
         img_seta = Image.open(caminho_seta)
         img_girada = img_seta.rotate(theta, expand=True)
         imagebox = OffsetImage(img_girada, zoom=0.15)
-        ab = AnnotationBbox(imagebox, (0.92, 0.85), xycoords='axes fraction', frameon=False, zorder=5)
+        ab = AnnotationBbox(imagebox, (0.92, 0.85), xycoords='figure fraction', frameon=False, zorder=5)
         ax.add_artist(ab)
     except Exception:
         pass
@@ -411,7 +411,7 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
         s.set_visible(False)
 
     fig.tight_layout()
-    fig.subplots_adjust(bottom=0.15)
+    fig.subplots_adjust(bottom=0.15, right=0.85)
     fig.savefig(saida, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return saida
@@ -601,17 +601,18 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
         for s in ax.spines.values():
             s.set_visible(False)
 
-        # Seta do Norte com Rosa dos Ventos de imagem asset (ACTION-030)
-        from matplotlib.offsetbox import OffsetImage, AnnotationBbox
-        try:
-            caminho_seta = Path(__file__).parent / "assets" / "seta_norte.png"
-            img_seta = Image.open(caminho_seta)
-            img_girada = img_seta.rotate(theta, expand=True)
-            imagebox = OffsetImage(img_girada, zoom=0.15)
-            ab = AnnotationBbox(imagebox, (0.92, 0.85), xycoords='axes fraction', frameon=False, zorder=5)
-            ax.add_artist(ab)
-        except Exception:
-            pass
+    # Seta do Norte única colocada na parte branca superior (ACTION-032)
+    from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+    try:
+        caminho_seta = Path(__file__).parent / "assets" / "seta_norte.png"
+        img_seta = Image.open(caminho_seta)
+        img_girada = img_seta.rotate(theta, expand=True)
+        imagebox = OffsetImage(img_girada, zoom=0.15)
+        # (0.5, 0.88) coloca exatamente no meio da parte branca superior entre os dois eixos
+        ab = AnnotationBbox(imagebox, (0.5, 0.88), xycoords='figure fraction', frameon=False, zorder=5)
+        ax1.add_artist(ab)
+    except Exception:
+        pass
 
     ax1.set_title("Hoje: a beira do rio", fontsize=12, weight="bold")
     ax2.set_title("Em dia: faixa de 30m coberta 🌳", fontsize=12, weight="bold")

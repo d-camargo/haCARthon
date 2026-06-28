@@ -2843,3 +2843,70 @@ PY
 - Inserido o texto do quadro com `fig.text()` no rodapé central, formatado dentro de um retângulo estilizado (`#f0f0f0` com bordas arredondadas).
 - Ajustadas as coordenadas da legenda (`bbox_to_anchor=(0.5, -0.02)`) e folga de subplot (`fig.subplots_adjust(bottom=0.25)`) para evitar qualquer colisão.
 - Validada com sucesso a imagem resultante.
+
+---
+
+## ACTION-032 — Mover Rosa dos Ventos para Fora do Mapa (Parte Branca)
+
+status: concluida
+tipo: codigo
+prioridade: media
+
+### Objetivo
+
+O usuário notou que a Rosa dos Ventos ainda está sobrepondo a imagem de satélite. Ele solicitou explicitamente que ela seja colocada na "parte branca da folha" (o background da figura), aproveitando o espaço vazio que fica sobrando, em vez de poluir a área da fazenda.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+
+### Passos
+
+1. **No `gerar_comparativo`:**
+   - Remova o bloco da Bússola que está *dentro* do loop `for ax in [ax1, ax2]:` (não precisamos de duas bússolas repetidas cobrindo os dois mapas).
+   - Coloque o bloco da bússola no escopo global (abaixo do laço, antes de desenhar os quadros de texto).
+   - Adicione a bússola usando a coordenada da Figura (assim ela foge do mapa e vai pra área branca). Exemplo de como fazer no matplotlib (já que a Figure não tem `add_artist` direto para isso):
+     ```python
+     try:
+         caminho_seta = Path(__file__).parent / "assets" / "seta_norte.png"
+         img_girada = Image.open(caminho_seta).rotate(theta, expand=True)
+         imagebox = OffsetImage(img_girada, zoom=0.15)
+         # (0.5, 0.88) vai colocar exatamente no meio da parte branca superior entre os dois eixos
+         ab = AnnotationBbox(imagebox, (0.5, 0.88), xycoords='figure fraction', frameon=False, zorder=5)
+         ax1.add_artist(ab) # Pode ancorar no ax1, mas a xycoords é figure fraction!
+     except Exception:
+         pass
+     ```
+2. **No `gerar_mapa` (mapa unitário):**
+   - O mapa unitário normalmente preenche a folha. Para garantir a "parte branca" para a bússola, precisamos ajustar a margem.
+   - Na linha em que você chama `fig.subplots_adjust(bottom=0.15)`, altere para: `fig.subplots_adjust(bottom=0.15, right=0.85)` (isso espreme o mapa para a esquerda e cria uma coluna branca na direita).
+   - Ajuste o bloco da bússola nesse método para que use `xycoords='figure fraction'` e posicione-a no vazio criado:
+     ```python
+     ab = AnnotationBbox(imagebox, (0.92, 0.85), xycoords='figure fraction', frameon=False, zorder=5)
+     ax.add_artist(ab)
+     ```
+3. Teste gerando as imagens no `/tmp/` para garantir que a bússola está completamente fora da grama.
+4. **Commit e push**. Mensagem: `Bot: move rosa dos ventos para area branca da figura usando figure fraction e ajusta margens`.
+
+### Comandos de validação
+
+```bash
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import mapa, cadastro
+imv = cadastro.carregar_imovel(open("data/imoveis_teste.local.txt").readline().strip())
+mapa.gerar_mapa(imv, "/tmp/teste_bussola_externa.png")
+mapa.gerar_comparativo(imv, "/tmp/teste_bussola_externa_cmp.png")
+print("OK. Olhar visualmente e garantir que a bussola NUNCA pisa no mapa de satelite.")
+PY
+```
+
+### Critérios de aceite
+
+- O ícone da bússola (rosa dos ventos) não deve ocultar 1 milímetro sequer do polígono da fazenda nem da imagem de satélite da Esri.
+- No mapa comparativo, a bússola fica isolada e centralizada no vazio do meio-topo da folha.
+
+### Resultado do executor
+
+- Em `gerar_comparativo`: removido o bloco da bússola de dentro do loop dos subplots. Adicionada uma única bússola posicionada no centro superior usando `xycoords='figure fraction'` na posição `(0.5, 0.88)` e ancorada ao eixo `ax1`.
+- Em `gerar_mapa`: ajustado o posicionamento da bússola para usar `xycoords='figure fraction'` e configurado o espaçamento da figura para criar uma margem branca lateral com `right=0.85` em `fig.subplots_adjust`.
+- Validada com sucesso a exportação sem qualquer overlap com o mapa ou satélite.
