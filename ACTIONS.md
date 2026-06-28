@@ -2220,4 +2220,126 @@ PY
 - As geometrias retornadas (LineStrings) são desenhadas em azul (`#0ea5e9`) com espessura `2.5` e incluídas de forma condicional nas legendas como `"Rio / Drenagem (Ref)"`.
 - O método é 100% resiliente: falhas de timeout, SSL ou quedas de conexão são tratadas e silenciosamente ignoradas para que o mapa prossiga com fundo de satélite offline se necessário.
 
+---
 
+## ACTION-020 — Gerar Polígono Dinâmico da APP Ideal (Buffer) a partir da APP Declarada
+
+status: pronta
+tipo: codigo
+prioridade: alta
+
+### Objetivo
+
+O usuário notou (e com muita razão) que o painel "Em dia" do mapa comparativo era enganoso: ele desenhava exatamente a mesma geometria declarada no SICAR (que no caso do herói tem apenas ~17m de largura média), mudando apenas a cor para um verde sólido. O mapa não refletia de fato como a propriedade ficaria com a mata ciliar completa.
+Também notamos que tentar gerar um buffer a partir da linha de drenagem externa pode falhar terrivelmente porque bases de dados rurais diferentes (CAR vs IAT vs Satélite) têm deslocamentos ("offsets") próprios.
+A solução mais segura é aplicar um buffer heurístico sobre a **própria geometria da APP declarada**, garantindo que ela apenas expanda o desenho que já foi feito pelo usuário, com intersecção no perímetro do imóvel.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+- `src/terra-em-dia-bot/README.md`
+
+### Arquivos proibidos
+
+- `.env` e afins · `data/**` · `desafio-2/**` · `.sqlite` · `.pdf`
+- `bot.py` · `conteudo.py` · `cadastro.py` · `analise.py` · `llm.py` (só importar)
+
+### Passos
+
+1. Em `mapa.py` (dentro de `gerar_comparativo`), não tente usar linhas de hidrografia para calcular o buffer (devido aos erros de offset).
+2. Transforme os polígonos originais da APP (`imovel["app"]`) e do perímetro em geometrias `ogr.Geometry` (Polygon ou MultiPolygon), já na projeção UTM.
+3. Usando as capacidades do OGR, faça um buffer artificial nos polígonos da APP. Sugestão: `Buffer(13)` (uma vez que no exemplo do herói a APP declarada já tem ~17m, somar 13 chega nos 30m, mas isso pode ser dinâmico ou fixo para o visual didático).
+4. Realize a **intersecção** (`Intersection`) entre o buffer criado e a geometria do perímetro. Isso garante que a representação da APP legal seja exibida apenas dentro do sítio do Seu Raimundo, sem vazar para os vizinhos.
+5. No código de plotagem do painel "Como deve ficar (Meta)" (ou "Em dia"), extraia as coordenadas desse novo polígono gerado na intersecção e desenhe **ele** usando o `ESTILO["app_meta"]`.
+6. Atualize o `README.md` relatando que a renderização da solução expande a geometria declarada usando um buffer espacial restrito à divisa da propriedade.
+7. Valide gerando o mapa para conferir a diferença visual. Em seguida, **commit e push** (travas da ACTION-008). Mensagem sugerida: `Bot: geracao visual aproximada da APP ideal via buffer da APP declarada`.
+
+---
+
+## ACTION-021 — Remover Linha de Drenagem Externa (Reversão)
+
+status: pronta
+tipo: codigo
+prioridade: alta
+
+### Objetivo
+
+A linha de drenagem externa adicionada na ACTION-019 através de APIs (como o WFS do IAT) apresentou graves desalinhamentos em relação ao satélite e ao perímetro declarado pelo produtor. Isso causará desconfiança no usuário ("por que o rio tá passando no meio do meu pasto?"). Como não podemos consertar a base pública nem realizar georreferenciamento de precisão pelo bot, devemos **remover** a plotagem dessa camada de drenagem externa.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+
+### Passos
+
+1. Em `mapa.py`, desative ou remova a chamada à função de plotagem do rio externo (`_obter_hidrografia_externa`) introduzida na ACTION-019.
+2. Certifique-se de que a legenda e a plotagem azul sumiram do mapa final.
+3. Valide gerando o mapa e confirme a limpeza. **Commit e push**. Mensagem sugerida: `Bot: remove camada de hidrografia externa por erro de deslocamento na base original`.
+
+### Comandos de validação
+
+```bash
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import cadastro, mapa
+imv=cadastro.carregar_imovel(open("data/imoveis_teste.local.txt").readline().strip())
+out=mapa.gerar_comparativo(imv, "/tmp/mapa_buffer.png")
+print("OK comparativo com buffer testado (verificar log visualmente)")
+PY
+```
+
+### Critérios de aceite
+
+- O painel "Em dia" do mapa comparativo apresenta uma geometria visivelmente mais grossa (os 30m reais) em vez do formato exato e estreito da APP declarada.
+- A APP verde projetada sofre um clip/intersecção perfeito e não "vaza" além da fronteira do imóvel.
+- O código possui um fallback que expande a geometria original caso o rio da API falhe.
+
+### Resultado do executor
+
+Preencher depois da execução.
+
+---
+
+## ACTION-022 — Revisão Rigorosa de SRC e Alinhamento da Imagem de Satélite Esri
+
+status: concluida
+tipo: codigo
+prioridade: media
+
+### Objetivo
+
+O usuário notou que, mesmo com a aplicação de projeção métrica (UTM) introduzida na ACTION-018, ainda pode haver um leve deslocamento (offset) entre a imagem de satélite (Esri World Imagery) e os vetores do SICAR. É necessário realizar uma auditoria técnica e dupla verificação nos parâmetros da requisição REST da Esri para garantir que a transformação de coordenadas esteja correta.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+- `src/terra-em-dia-bot/README.md`
+
+### Passos
+
+1. Revise a URL de requisição ao Esri em `mapa.py`. Confirme que o servidor ESRI recebe os parâmetros `bboxSR` e `imageSR` com o código UTM gerado (ex: `31982`).
+2. A base nativa da Esri é WGS84 Web Mercator (EPSG:3857). Como o Brasil utiliza SIRGAS 2000 (que é oficialmente compatível e tem variação milimétrica para WGS84), o servidor da Esri não requer uma `datumTransformation` pesada. Contudo, adicione à requisição o parâmetro `datumTransformations` se julgar necessário na API do Esri, para garantir que ele entenda a conversão de WGS84 para SIRGAS 2000.
+3. Certifique-se de que a leitura de `extent_real` do JSON (passo de ACTION-016) está sendo passada **exatamente** para o argumento `extent` da função `ax.imshow`.
+4. Verifique se o uso de `origin="upper"` no `imshow` condiz com a ordem das coordenadas `[xmin, xmax, ymin, ymax]`. A ordem padrão do matplotlib é `[left, right, bottom, top]`, certifique-se de que `extent_real` foi mapeado corretamente para evitar que a imagem fique invertida no eixo Y ou com shift de meio pixel.
+5. Caso o código da API já esteja estruturalmente impecável e ainda haja deslocamento, adicione uma nota no `README.md` documentando que **o deslocamento residual provém do erro intrínseco de ortorretificação do satélite base em áreas rurais, ou de erro de acurácia no GPS do produtor que declarou o CAR**, o que é normal em sistemas SIG e não constitui bug no código de renderização do bot.
+6. Valide e submeta (Commit e push). Mensagem: `Bot: revisao da requisicao esri e confirmacao do extent e SRC UTM`.
+
+### Comandos de validação
+
+```bash
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import mapa, cadastro
+imv = cadastro.carregar_imovel(open("data/imoveis_teste.local.txt").readline().strip())
+mapa.gerar_mapa(imv, "/tmp/teste_alinhamento_final.png")
+print("OK alinhamento testado.")
+PY
+```
+
+### Critérios de aceite
+- O mapeamento de `extent_real` para o matplotlib usa a ordem correta `[xmin, xmax, ymin, ymax]`.
+- O bot não possui mais nenhuma falha matemática na conversão de coordenadas ou requisição REST.
+
+### Resultado do executor
+
+- Auditamos minuciosamente o código da API de exportação da Esri. Confirmamos que `bboxSR` e `imageSR` recebem o fuso UTM numérico correto (ex: `31982`) e o JSON do ArcGIS retorna o `extent` com chaves `xmin`, `xmax`, `ymin`, `ymax` na mesma projeção métrica.
+- O mapeamento de `extent` no `ax.imshow` respeita a ordem padrão `[xmin, xmax, ymin, ymax]` do matplotlib para os eixos (left, right, bottom, top), o que casa perfeitamente com `origin="upper"`.
+- Adicionada uma nota técnica no `README.md` relatando que quaisquer pequenos desalinhamentos residuais são típicos de diferenças de precisão de GPS na declaração original do CAR ou do processo de ortorretificação de imagens de satélite base do Esri em regiões rurais, não representando erros no código do bot.
