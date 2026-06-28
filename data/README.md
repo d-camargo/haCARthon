@@ -30,3 +30,11 @@ este README é o registro do que existe, de onde veio e **quando foi extraído**
 
 > ⚠️ Verificar disponibilidade e atualização antes de assumir que funcionam.
 > **Sempre registrar a data de extração** na tabela acima.
+
+## Classificação por Módulos Fiscais (MF)
+Para fins de enquadramento da persona do projeto (pequeno/médio produtor rural - Seu Raimundo), os imóveis da base local são classificados de acordo com a Lei 12.651/2012 (Art. 3º):
+- **Pequena Propriedade:** até 4 módulos fiscais (MF).
+- **Média Propriedade:** de 4 a 15 módulos fiscais (MF).
+- **Grande Propriedade:** acima de 15 módulos fiscais (MF).
+
+O módulo fiscal do município de Querência do Norte/PR é de **30.0 hectares**. O script `selecionar_demo.py` restringe a escolha dos 3 imóveis de demonstração exclusivamente para propriedades pequeno/médio (≤ 15 MF), excluindo grandes latifúndios.

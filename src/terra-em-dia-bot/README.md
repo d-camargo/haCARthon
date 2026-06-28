@@ -31,7 +31,7 @@ No Telegram, abra seu bot e mande `/start`. Use `/metricas` pra ver o KPI.
 O projeto permite selecionar imóveis de demonstração da base local e simular conversas via linha de comando (sem precisar de chaves do Telegram):
 
 1. **Selecionar imóveis de demonstração:**
-   Rode o script abaixo para selecionar deterministicamente 3 imóveis locais de Querência do Norte/PR com perfis contrastantes (maior déficit de RL, menor déficit de RL, e maior mata ciliar):
+   Rode o script abaixo para selecionar deterministicamente 3 imóveis locais de Querência do Norte/PR com perfis contrastantes, restringindo a seleção apenas a pequenas e médias propriedades rurais (até 15 módulos fiscais, segundo o art. 3º da Lei 12.651/2012):
    ```bash
    PYTHONPATH=. .venv/bin/python selecionar_demo.py --forcar
    ```

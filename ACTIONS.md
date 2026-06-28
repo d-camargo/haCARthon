@@ -1112,3 +1112,115 @@ git log --oneline -1
 - Confirmado que nenhum arquivo ignorado ou restrito (.env, data/imoveis_teste.local.txt, sqlite, etc.) foi stageado.
 - Commit realizado em português: "Bot: motor online por WFS (qualquer imovel/UF) + satelite no mapa + simulacao por codigo"
 - Push concluído com sucesso para o repositório remoto.
+
+---
+
+## ACTION-009 — Corrigir a seleção: só pequeno/médio produtor (filtro por módulos fiscais)
+
+status: pronta
+tipo: codigo
+prioridade: alta
+
+### Objetivo
+
+Refazer a escolha dos 3 imóveis-demo **excluindo propriedades grandes**: a persona é **pequeno e médio
+produtor rural** (Seu Raimundo). A seleção atual incluiu um imóvel de **~10.525 ha**, que é
+**grande** e não representa a persona.
+
+### Contexto
+
+A ACTION-005 contrastou os 3 imóveis por déficit de RL / mata ciliar, mas **não filtrou por tamanho**.
+A classe do imóvel é definida por **módulos fiscais (MF)**, não por hectares no olho (Lei 12.651/2012,
+art. 3º): **pequena propriedade = até 4 MF; média = de 4 a 15 MF; grande = acima de 15 MF**. Logo,
+"pequeno **e** médio" = **≤ 15 MF**.
+
+Verificado na base local de Querência do Norte (já temos): dos 224 candidatos com APP+RL, **196 são
+pequeno/médio (≤ 15 MF)** — mediana ~79 ha, sobra contraste. **28 são grandes (> 15 MF)** e devem sair
+(é onde está o de ~10.525 ha).
+
+**Módulo fiscal de Querência do Norte/PR ≈ 30 ha** — consistente com o próprio storyboard
+(`docs/entregar/entregar-terra-em-dia.md`: "~3 módulos; 89,6 ha"). Use como constante nomeada e
+configurável; se confirmar o valor oficial do INCRA e ele divergir, ajuste a constante (o filtro
+continua válido).
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/selecionar_demo.py`
+- `src/terra-em-dia-bot/README.md`
+- `data/README.md`
+- `data/imoveis_teste.local.txt` e `data/candidatos_demo.local.txt` (**gerados pelo script**, gitignored)
+
+### Arquivos proibidos
+
+- `.env` e afins · `desafio-2/**` · `docs/base-documental/**` · `.sqlite` · `.pdf`
+- `bot.py` · `cadastro.py` · `analise.py` · `conteudo.py` · `llm.py` · `memoria.py` · `mapa.py`
+  (apenas **importe** o que precisar; não os altere)
+- `data/**` que **não** seja os dois `*.local.txt` acima
+
+### Passos
+
+1. Em `selecionar_demo.py`, defina `MODULO_FISCAL_HA = 30.0` (comentar: módulo fiscal de Querência do
+   Norte/PR) e calcule `modulos = area_ha / MODULO_FISCAL_HA`.
+2. **Filtre os candidatos para `modulos <= 15`** (pequeno + médio). **Exclua** `modulos > 15` (grande)
+   — é o que remove o de ~10.525 ha.
+3. Mantenha a escolha dos **3 com histórias contrastantes**, mas **todos pequeno/médio**:
+   - um com **déficit de RL notável**;
+   - um **quase regular** (déficit ~0);
+   - um com **mata ciliar marcante**.
+   Prefira que o "herói" (1º da lista) seja **pequeno (1–4 MF)**, próximo do perfil do storyboard
+   (~90 ha). Evite os 3 colados no teto de 15 MF.
+4. Regenere `data/imoveis_teste.local.txt` (com `--forcar`, pois já existe) e
+   `data/candidatos_demo.local.txt`. Na tabela, **acrescente as colunas `modulos` e `classe`**
+   (pequeno/médio/grande). **Não imprima `cod_imovel`** no stdout — só índice, área, MF, classe e
+   números de RL/mata ciliar.
+5. Atualize `README.md` e `data/README.md`: a seleção agora restringe a **pequeno/médio (≤ 15 MF)**,
+   citando a base legal (classe por módulos fiscais).
+6. Depois de validar, faça **commit e push** seguindo as travas da ACTION-008 (add por caminho
+   explícito; **nunca** commitar `data/**`, `.env`, `.sqlite`). Mensagem sugerida:
+   `Demo: restringe os 3 imoveis-teste a pequeno/medio produtor (<=15 modulos fiscais)`.
+
+### Comandos de validação
+
+```bash
+python -m py_compile src/terra-em-dia-bot/*.py
+```
+
+```bash
+# Regenera a selecao e confere que os 3 sao pequeno/medio (<=15 MF). Nao imprime cod_imovel.
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python src/terra-em-dia-bot/selecionar_demo.py --forcar
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import cadastro, analise
+MOD=30.0
+cods=[l.strip() for l in open("data/imoveis_teste.local.txt") if l.strip() and not l.startswith("#")]
+assert len(cods)==3, ("esperava 3 imoveis", len(cods))
+mfs=[]
+for c in cods:
+    an=analise.analisar(cadastro.carregar_imovel(c))
+    mf=an["area_ha"]/MOD
+    mfs.append(round(mf,1))
+    assert mf<=15, f"imovel grande na selecao: {mf:.1f} MF"   # NAO imprime o cod
+print("OK | modulos fiscais dos 3:", sorted(mfs), "| todos <= 15 MF (pequeno/medio)")
+PY
+git check-ignore data/imoveis_teste.local.txt && echo "ignore OK"
+```
+
+### Critérios de aceite
+
+- Os 3 imóveis-demo têm **≤ 15 módulos fiscais** (pequeno/médio); nenhum grande.
+- O imóvel de ~10.525 ha **não** está mais na seleção.
+- As histórias continuam contrastantes (déficit alto / ~regular / mata ciliar marcante).
+- `candidatos_demo.local.txt` mostra `modulos` e `classe` para troca manual.
+- Nenhum `cod_imovel` real impresso/versionado; `*.local.txt` seguem gitignored.
+- Validação passa; commit + push feitos com as travas da ACTION-008.
+
+### Forma errada provável
+
+- Não filtrar por hectares "no olho" — usar **módulos fiscais** (`area_ha / MODULO_FISCAL_HA`).
+- Não escolher os 3 todos no teto de 15 MF (descaracteriza a persona).
+- Não imprimir nem versionar `cod_imovel` real.
+- Não alterar `cadastro.py`/`analise.py`/`mapa.py` (só importar).
+- Não commitar `data/**` (só os `*.local.txt` gerados, que seguem ignorados).
+
+### Resultado do executor
+
+Preencher depois da execução.
