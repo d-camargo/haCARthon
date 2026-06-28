@@ -105,7 +105,7 @@
     - Direita: **"como deve ficar"** (mapa `meta`, faixa verde).
   - **Direita/canto — print do bot** (recorte vertical curto da conversa real).
 - **Texto na tela:** títulos "como está" / "como deve ficar" sobre os mapas; nada mais.
-- **Micro-destaque:** sob os mapas, uma linha: "Reserva Legal: **você declarou X · a lei pede Y · falta Z**" (preencher com os números do imóvel-demo).
+- **Micro-destaque:** sob os mapas, uma linha: "Reserva Legal: **você declarou 8,3 ha · a lei pede 17,9 ha · falta 9,6 ha**". (Imóvel-herói: Querência do Norte/PR, **89,6 ha ≈ 3 módulos fiscais** = pequena propriedade; mata ciliar declarada **2,0 ha** ≈ 2 campos de futebol.)
 - **Caption de credibilidade (rodapé do slide, opcional, 14 pt):** "Exemplo real — Querência do Norte/PR; só nessa cidade, **83 produtores pequenos/médios** parados esperando responder" (fonte: Painel SFB, jun/2026 — ver `evidencias-pitch.md` E1c).
 
 ### Slide 6 — Diferencial
@@ -138,4 +138,4 @@
 - **Ritmo de cor:** claro (1,2) → escuro (3) → claro (4,5,6,7) → escuro (8). Dá respiro e ênfase.
 - **Acento lima** só em: número-herói (slide 2) e cartão "mede o entendimento" (slide 6). Não espalhar.
 - **Exportar** como apresentação 16:9; a equipe grava a narração por cima (voz humana, ≤3:00).
-- **Pendências de conteúdo** marcadas com ⚠️: números X/Y/Z da Reserva Legal do slide 5 — preencher com o imóvel-demo (herói) antes de gravar. (O número do slide 2 já está fechado — ver `evidencias-pitch.md`.)
+- **Conteúdo dos slides 2 e 5 fechado** — todos os números em `evidencias-pitch.md`. Não resta ⚠️ de dados; só reconferir os painéis no dia da gravação. **Não versionar o `cod_imovel` do herói** (fica só no `.env`/arquivo local).
