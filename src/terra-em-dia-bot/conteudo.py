@@ -178,7 +178,7 @@ def guia_acao(an: dict) -> str:
     return (
         "Para a gente resolver isso, o passo a passo é simples:\n"
         "1. Conferir a mata ciliar e as áreas verdes no mapa\n"
-        "2. Fazer os ajustes necessários baixando o Módulo de Cadastro no SICAR (https://car.gov.br/#/baixar)" + extra + "\n"
+        "2. Fazer os ajustes necessários entrando no site do SICAR (https://car.gov.br/#/baixar) e fazendo login com a conta gov.br" + extra + "\n"
         "3. No final, *você* ou o seu técnico confirmam a retificação.\n\n"
         "Se quiser, posso te guiar mostrando onde olhar primeiro no sistema."
     )
@@ -198,7 +198,7 @@ REGRAS = (
     "imóvel guardado com vegetação (art. 12).\n"
     "- O aceite/retificação só vale DENTRO do SICAR — o produtor é quem confirma.\n"
     "- Não prometer liberação de crédito: é decisão do banco.\n"
-    "- Quando falar sobre os passos para ajustar ou retificar, sugira usar o Módulo de Cadastro no site oficial e forneça o link direto: https://car.gov.br/#/baixar"
+    "- Quando falar sobre os passos para ajustar ou retificar, sugira entrar no site e fazer login com a conta gov.br no site oficial e forneça o link direto: https://car.gov.br/#/baixar"
 )
 
 

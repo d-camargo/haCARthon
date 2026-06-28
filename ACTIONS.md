@@ -2436,3 +2436,38 @@ Para garantir que o usuário saiba exatamente *onde* realizar os ajustes, o bot 
 - Inserido o link direto `https://car.gov.br/#/baixar` em `conteudo.py` no roteiro determinístico do `guia_acao` e na constante `REGRAS`.
 - Injetada a regra de conduta correspondente no `PROMPT_SISTEMA` (`SYSTEM`) em `llm.py` para instruir o assistente conversacional inteligente a sempre citar o link oficial ao propor ajustes no SICAR.
 - Validada a compilação e execução de testes.
+
+---
+
+## ACTION-025 — Corrigir o texto de acesso ao SICAR (Gov.br)
+
+status: concluida
+tipo: codigo
+prioridade: media
+
+### Objetivo
+
+O texto gerado na ACTION-024 orientava o produtor a "baixar o Módulo de Cadastro". Porém, hoje a retificação é feita 100% web através da Central do Proprietário/Possuidor, fazendo login com a conta Gov.br, acessada pelo portal `https://car.gov.br/#/baixar` (Central/Módulos). Precisamos corrigir o texto em `conteudo.py` e `llm.py` para remover a palavra "baixar" (download) e instruir o usuário a "entrar no site e fazer login com a conta Gov.br".
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/conteudo.py`
+- `src/terra-em-dia-bot/llm.py`
+
+### Passos
+
+1. Em `conteudo.py`, no texto da função `guia_acao(an)`, altere o Passo 2 de `"2. Fazer os ajustes necessários baixando o Módulo de Cadastro no SICAR..."` para: `"2. Fazer os ajustes necessários entrando no site do SICAR (https://car.gov.br/#/baixar) e fazendo login com a conta gov.br"`.
+2. Em `conteudo.py`, atualize a constante `REGRAS`. Troque `"sugira usar o Módulo de Cadastro"` por `"sugira entrar no site e fazer login com a conta gov.br"`.
+3. Em `llm.py`, atualize o `PROMPT_SISTEMA`. A instrução recém-adicionada não deve falar em "baixar" o módulo, e sim explicitamente: `Não cite download. Diga para entrar no site (https://car.gov.br/#/baixar) e fazer login com a conta gov.br para retificar o CAR`.
+4. Rode os testes e submeta. **Commit e push**. Mensagem: `Bot: altera instrucao de retificacao para login gov.br em vez de download`.
+
+### Critérios de aceite
+
+- Nenhuma resposta determinística ou do LLM fala sobre "baixar" o sistema.
+- A menção à "conta gov.br" está explícita nas instruções, pois reflete o fluxo real atual do CAR.
+
+### Resultado do executor
+
+- Substituídas as menções a "baixar Módulo de Cadastro" por "entrar no site do SICAR e fazer login com a conta gov.br" em `conteudo.py` (função `guia_acao` e constante `REGRAS`).
+- Ajustada a regra correspondente no `SYSTEM` prompt em `llm.py` para reforçar a ausência de download e preferência por login com a conta gov.br.
+- Validada a compilação e executados os testes com sucesso.
