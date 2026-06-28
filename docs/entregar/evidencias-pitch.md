@@ -22,6 +22,38 @@
 congela ~154 mi ha (21 % da área cadastrada) — e ¼ de toda a Reserva Legal do país." É o gargalo que o
 Terra em Dia destrava. ⚠️ Não afirmar como "validados" — o recorte é **parados/aguardando resposta**.
 
+## E1b. Persona — distribuição por tamanho do imóvel (módulos fiscais)
+
+**Fonte:** Painel de Regularização Ambiental — SFB. **Data de extração:** **2026-06-28**.
+Classe (Lei 12.651/2012, art. 3º): pequena ≤ 4 MF; média 4–15 MF; grande > 15 MF.
+
+**Total Brasil (todos os cadastros):**
+| Classe | Imóveis | % do total |
+|---|---:|---:|
+| Pequena (0–4 MF) | 7.781.343 | 93,8 % |
+| Média (4–15 MF) | 378.709 | 4,6 % |
+| **Pequeno + médio** | **8.160.052** | **98,4 %** |
+| Grande (>15 MF) + sem classe | 132.753 | 1,6 % |
+
+Total: 8.292.805 imóveis. Pequeno/médio detêm ~378 mi ha (52,7 % da área).
+
+**Parados aguardando resposta da notificação (mesmo recorte do E1):**
+| Classe | Imóveis | % dos parados |
+|---|---:|---:|
+| Pequena (0–4 MF) | 1.007.434 | 90,9 % |
+| Média (4–15 MF) | 75.097 | 6,8 % |
+| **Pequeno + médio** | **1.082.531** | **97,7 %** |
+| Grande (>15 MF) + sem classe | 25.218 | 2,3 % |
+
+Total parados: 1.107.749. Área pequeno/médio parada: 58,0 mi ha = 37,7 % (por **contagem** é
+pequeno/médio; por **área** os grandes pesam — usar a contagem para o argumento da persona).
+
+**Consistência:** grande+sem-classe parados (25.218) ≤ grande+sem-classe no BR (132.753). ✔
+**Como usar:** "98 % dos imóveis do CAR são pequeno/médio (é o Seu Raimundo) — e **97,7 % dos parados**
+também. O gargalo é exatamente dele."
+**Nota:** as primeiras telas de 0–4/4–15 MF que somavam ~108 mil estavam com um filtro extra (estado)
+e foram **descartadas**; estas, só com "aguardando resposta", reconciliam com os totais.
+
 ## E2. Validação e gargalo da resposta do proprietário (apoio aos slides 2–3)
 
 **Fonte:** transcrição da **Live 06** (tira-dúvidas com a coordenação do haCARthon), na base documental
@@ -40,9 +72,8 @@ Terra em Dia destrava. ⚠️ Não afirmar como "validados" — o recorte é **p
 ## E3. Outros números do painel que valem a pena (candidatos a buscar)
 
 Para reforço/Q&A — pegar do mesmo painel e **registrar fonte+data aqui** antes de usar:
+- ✅ **Distribuição por tamanho do imóvel** (módulos fiscais): **feito — ver E1b** (98,4 % do CAR e 97,7 % dos parados são pequeno/médio).
 - **Análises realizadas × validadas** (quantifica o gargalo da resposta).
-- **Distribuição por tamanho do imóvel** (módulos fiscais): mostrar que **pequeno/médio é a maioria** dos
-  parados → casa com a persona (Seu Raimundo).
 - **Recorte do Paraná** (estado da demo): nº de imóveis/parados no PR localiza a história.
 - **Área a recompor / déficit ambiental** total: stakes ambientais para o slide 7 (impacto).
 - **Notificações enviadas × respondidas** (se houver): vira proxy do nosso KPI de compreensão.

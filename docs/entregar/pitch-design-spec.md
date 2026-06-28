@@ -74,10 +74,11 @@
   - Número-herói: **1,1 milhão** (Poppins Bold 150, `#16a34a`)
   - Linha sob o número: "imóveis parados esperando o produtor responder"
   - Linha de escala (menor, `#1c2b1f`): "de **8,29 mi** cadastrados (13%) · **154 mi ha** travados (21% da área)"
+  - Chip de destaque (pílula verde-primário, texto off-white): "**98%** dos parados são **pequeno e médio produtor** — é o Seu Raimundo"
   - Selo/fonte (rodapé do slide, 14 pt): "Painel de Regularização Ambiental — SFB · jun/2026"
 - **Visual:** silhueta do mapa do Brasil em `#4d9e3f` 15% atrás do número. Opcional: um pequeno bloco "1 em cada 8 imóveis" como reforço visual do 13%.
 - **Acento lima** pode realçar o "1,1 milhão" ou a palavra "parados".
-- **Dado confirmado** (Painel SFB, 28/06/2026): 1.107.749 de 8.292.805 imóveis (13,4%); 153,8 mi ha (21,4%). Memória de cálculo e fonte em `evidencias-pitch.md`. ⚠️ Conferir se o painel mudou no dia da gravação.
+- **Dado confirmado** (Painel SFB, 28/06/2026): 1.107.749 de 8.292.805 imóveis parados (13,4%); 153,8 mi ha (21,4%); **97,7% dos parados são pequeno/médio** (1.082.531). Memória de cálculo e fonte em `evidencias-pitch.md`. ⚠️ Conferir se o painel mudou no dia da gravação.
 
 ### Slide 3 — O buraco (slide de virada)
 - **Fundo:** verde-floresta `#14532d`, texto off-white.

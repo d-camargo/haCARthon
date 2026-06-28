@@ -17,9 +17,9 @@
 > "Seu Raimundo é pequeno produtor. Um dia chega uma carta sobre o CAR — o cadastro ambiental do sítio dele. Ele não entende o que é pra fazer. Tem medo de mexer e fazer errado. Então faz o mais seguro: não faz nada. E sem entender, ele não regulariza, não acessa crédito e o mato da beira do rio não é recuperado."
 
 ### Slide 2 — O tamanho do problema · 0:25–0:45
-**[Tela]** Mapa do Brasil + número-herói **1,1 milhão**. Sub: *"imóveis parados esperando o produtor responder"*. Linha de escala: *de 8,29 mi cadastrados (13%) · **154 mi ha travados** (21% da área)*. Selo/fonte: *Painel de Regularização Ambiental — SFB (jun/2026)*.
+**[Tela]** Mapa do Brasil + número-herói **1,1 milhão**. Sub: *"imóveis parados esperando o produtor responder"*. Linha de escala: *de 8,29 mi cadastrados (13%) · **154 mi ha travados** (21% da área)*. Chip de destaque: ***98% deles são pequeno e médio produtor** — é o Seu Raimundo*. Selo/fonte: *Painel de Regularização Ambiental — SFB (jun/2026)*.
 **[Narração]**
-> "E não é só ele. São mais de oito milhões de cadastros no país — e **mais de um milhão estão parados, esperando o produtor responder** uma notificação. Um milhão de propriedades, mais de cento e cinquenta milhões de hectares, travados — não por falta de tecnologia, mas porque o produtor **não entendeu o que precisa fazer**."
+> "E não é só ele. São mais de oito milhões de cadastros no país — e **mais de um milhão estão parados**, esperando o produtor responder uma notificação. E **98% deles são pequeno e médio produtor**: é o Seu Raimundo que está travado — não por falta de tecnologia, mas porque **não entendeu o que precisa fazer**."
 
 ### Slide 3 — O buraco (por que ninguém resolveu) · 0:45–1:05
 **[Tela]** Print do "Tô em Dia / Meu Imóvel Rural" ao lado de um trecho do Código Florestal. Título: *"As ferramentas oficiais traduzem o crédito — não a obrigação ambiental."*
