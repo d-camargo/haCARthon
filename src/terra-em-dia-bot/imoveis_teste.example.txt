@@ -1,0 +1,7 @@
+# imoveis_teste.example.txt - Códigos fictícios de demonstração.
+# O arquivo real contendo os imóveis de Querência do Norte/PR deve ser gerado
+# pelo script selecionar_demo.py e fica salvo em data/imoveis_teste.local.txt (gitignored).
+
+PR-4121000-0000000000000000000000000000000000000001
+PR-4121000-0000000000000000000000000000000000000002
+PR-4121000-0000000000000000000000000000000000000003

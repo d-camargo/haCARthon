@@ -131,7 +131,7 @@ Destaques para o D3:
 > Entrega **protótipo funcional** (bot de Telegram) + vídeo + pitch. Implementado em `src/terra-em-dia-bot/` (como rodar: `README.md` de lá).
 - **Linguagem/runtime:** **Python 3.12**. **venv com `--system-site-packages`** (para enxergar o **GDAL/`osgeo`** do sistema — não vem do pip).
 - **Telegram:** **`python-telegram-bot`** (v21+, async). Token via `.env`.
-- **Dados reais do CAR:** leitura por `cod_imovel` na **base oficial do Paraná** (`data/`, gitignored) via **`osgeo`/GDAL** — reaproveita o conceito do motor do D2. Registrar data de extração.
+- **Dados reais do CAR (motor online):** `cadastro.carregar_imovel(cod)` busca **perímetro + atributos (cidade, área, módulos fiscais) de qualquer imóvel/UF** no **WFS oficial** do SICAR (`sicar:sicar_imoveis_<uf>`, filtro por `cod_imovel`, leitura por **GDAL `/vsicurl/`** — sem QGIS, sem captcha; a UF sai do prefixo do `cod_imovel`). A **base local** do PR (`data/`, gitignored) vira **enriquecimento opcional** (APP/RL desenhadas) e **fallback offline**. ⚠️ **APP e Reserva Legal NÃO estão no WFS aberto** — só no **download da Consulta Pública (com captcha)**; por isso, para imóvel arbitrário, a **mata ciliar** é tratada de forma **dimensional (faixa de 30 m)** e, quando viável, **derivada** de hidrografia de referência (ANA/IBGE), e o **déficit de RL não é inventado** (mostra-se a RL **exigida** = 20% da área e manda conferir o demonstrativo no SICAR). Reaproveita o **conceito** do motor do D2 — o `wfs.py` do D2 depende do **QGIS** e **não** roda no bot. Registrar data de extração. Endpoint e campos verificados em **2026-06-28**.
 - **Mapas:** **`matplotlib`** (offline) — dois: **"atual"** (perímetro + mata ciliar azul + RL) e **"como deve ficar"** (mata ciliar em verde).
 - **LLM (agnóstico):** interface **OpenAI-compatible** (`llm.py`), `base_url` configurável → OpenAI na demo, trocável por modelo **aberto/local** (Ollama/vLLM). **Fallback determinístico** (`conteudo.py`) se faltar chave.
 - **Métrica:** compreensão (sim/não) em arquivo local gitignored → KPI `/metricas`.
@@ -158,6 +158,7 @@ Destaques para o D3:
 - **Imóvel-exemplo:** **real, anonimizado** — 89,6 ha; mata ciliar ~2 ha; **déficit de RL ~9,6 ha**. `cod_imovel` só local.
 - **Canal:** **Telegram** (protótipo funcional); multicanal por princípio.
 - **LLM:** OpenAI na demo, atrás de interface agnóstica (trocável por modelo aberto/local).
+- **Motor 100% online (28/06):** WFS oficial como fonte **universal** do perímetro/atributos (qualquer imóvel do Brasil por `cod_imovel`); base local = enriquecimento/fallback. **Satélite Esri World Imagery** (endpoint REST `export`, EPSG:4326) como fundo do mapa, com fallback para o mapa offline. **Nome do rio** e **faixa de mata ciliar** derivados de hidrografia de referência entram como **spike** (validar cobertura antes de integrar). Imóveis de teste ficam em arquivo **gitignored** (`data/imoveis_teste.local.txt`).
 
 ## Pendências (até a entrega — domingo 28/06)
 1. **Gravar o vídeo** de 2 min da conversa real (com os 2 mapas).

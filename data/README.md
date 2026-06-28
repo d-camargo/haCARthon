@@ -9,6 +9,7 @@ este README é o registro do que existe, de onde veio e **quando foi extraído**
 |---|---|---|---|---|---|
 | `sicar/imoveis_pr_itaguaje.geojson` | SICAR WFS oficial (`geoserver.car.gov.br`) | PR / Itaguajé | imóveis (perímetro) | 2026-06-25 | 364 imóveis; `baixar.sh`; não versionado |
 | `sicar/imoveis_pr_querencia_do_norte.geojson` | SICAR WFS oficial | PR / Querência do Norte | imóveis (perímetro) | 2026-06-25 | 548 imóveis; `baixar.sh`; não versionado |
+| SICAR WFS (qualquer UF) | SICAR WFS oficial (`geoserver.car.gov.br`) | Brasil / qualquer UF | imóveis (perímetro) | 2026-06-28 | Consulta em tempo real integrada ao motor do bot |
 | `assentamentos/assentamentos_pr.geojson` | INCRA i3geo WFS (`acervofundiario.incra.gov.br`) | PR | assentamentos (PA) | 2026-06-25 | 309 PAs; `baixar_assentamentos.sh incra pr`; eixo corrigido; não versionado |
 | _(exemplo)_ | Consulta Pública SICAR | — | perímetro/APP/RL | AAAA-MM-DD | — |
 

@@ -38,9 +38,9 @@ Pequenos e médios produtores **não entendem o que o Código Florestal exige da
 
 ## 7. Viabilidade (legal, técnica, operacional) e tempo
 - **Legal:** respeita o Código Florestal (Lei 12.651/2012); o aceite/retificação só vale **dentro do SICAR**; não promete liberação de crédito (é decisão do banco).
-- **Técnica:** **já funciona** — protótipo em Python lê dados oficiais do CAR (base do PR via GDAL), gera os mapas e conversa com LLM **agnóstico de modelo**. A consulta por imóvel já existe "via API".
+- **Técnica:** **já funciona** — protótipo em Python lê dados oficiais do CAR de **qualquer imóvel do Brasil pelo serviço aberto do SICAR** (WFS oficial, `geoserver.car.gov.br`, consultado pelo número do CAR), gera os mapas (com **imagem de satélite de fundo**) e conversa com LLM **agnóstico de modelo**. As feições declaradas (mata ciliar/Reserva Legal) vêm do dado oficial do imóvel; a leitura é o ponto único `cadastro.carregar_imovel(cod)`.
 - **Operacional:** multicanal por princípio (Telegram/WhatsApp/caixa Gov.br); distribuição via cooperativas/sindicatos/ATER.
-- **Tempo:** protótipo pronto. Para um **piloto real** (um município/cooperativa): ~8–12 semanas. Etapas: (1) integrar a **leitura oficial por API** do CAR; (2) cobrir mais feições/estados; (3) multicanal; (4) **piloto com ATER**; (5) painel da Luana.
+- **Tempo:** protótipo pronto (já lê qualquer imóvel pelo serviço oficial). Para um **piloto real** (um município/cooperativa): ~8–12 semanas. Etapas: (1) ampliar as **feições declaradas por API/derivação** (mata ciliar e RL para todo o país, hoje completas no recorte do piloto); (2) cobrir mais estados; (3) multicanal; (4) **piloto com ATER**; (5) painel da Luana.
 
 ## 8. Código aberto (como pode ser compartilhada)
 - **Licenciável como GPL-3.0**, arquitetura **modular** (dados, análise legal, mapa, conversa, LLM) — reaproveitável por **qualquer estado ou órgão**.

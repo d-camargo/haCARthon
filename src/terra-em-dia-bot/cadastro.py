@@ -26,24 +26,7 @@ APP_DIR = DATA / "Área de Preservação Permanente"
 RL_DIR = DATA / "Reserva Legal"
 
 
-def _anel(ring) -> list[tuple[float, float]]:
-    return [(ring.GetX(i), ring.GetY(i)) for i in range(ring.GetPointCount())]
-
-
-def _poligonos(geom) -> list[tuple[list, list]]:
-    """Achata POLYGON/MULTIPOLYGON em [(anel_externo, [furos])]."""
-    out: list[tuple[list, list]] = []
-    if geom is None:
-        return out
-    nome = geom.GetGeometryName()
-    if nome == "POLYGON":
-        ext = _anel(geom.GetGeometryRef(0))
-        furos = [_anel(geom.GetGeometryRef(i)) for i in range(1, geom.GetGeometryCount())]
-        out.append((ext, furos))
-    elif nome in ("MULTIPOLYGON", "GEOMETRYCOLLECTION"):
-        for i in range(geom.GetGeometryCount()):
-            out.extend(_poligonos(geom.GetGeometryRef(i)))
-    return out
+from wfs_car import _anel, _poligonos
 
 
 def _ler(caminho: Path, cod: str, campo: str = "cod_imovel"):
@@ -80,12 +63,24 @@ def _camadas(pasta: Path, cod: str) -> list[dict]:
 
 
 def carregar_imovel(cod: str) -> dict | None:
-    """Junta perímetro + APP + RL do imóvel. None se não achar o perímetro."""
-    perimetro, attrs = [], None
-    for gj in sorted(PERIM_DIR.glob("imoveis_pr_*.geojson")):
-        perimetro, attrs = _ler(gj, cod)
-        if perimetro:
-            break
+    """Junta perímetro + APP + RL do imóvel. Tenta WFS online primeiro, depois local."""
+    import wfs_car
+    
+    perimetro, attrs = None, None
+    fonte = "wfs"
+    
+    try:
+        perimetro, attrs = wfs_car.buscar_perimetro(cod)
+    except Exception:
+        perimetro, attrs = None, None
+        
+    if not perimetro:
+        fonte = "local"
+        for gj in sorted(PERIM_DIR.glob("imoveis_pr_*.geojson")):
+            perimetro, attrs = _ler(gj, cod)
+            if perimetro:
+                break
+                
     if not perimetro:
         return None
 
@@ -95,4 +90,5 @@ def carregar_imovel(cod: str) -> dict | None:
         "attrs": attrs or {},
         "app": _camadas(APP_DIR, cod),
         "rl": _camadas(RL_DIR, cod),
+        "fonte": fonte,
     }

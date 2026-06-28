@@ -26,9 +26,10 @@ def analisar(imovel: dict) -> dict:
     mata = next((f for f in app if f["tipo"] == "app_rio_ate_10"), app[0] if app else None)
     app_ha = _num(mata.get("area_ha")) if mata else 0.0
 
+    tem_rl = bool(imovel.get("rl"))
     rl_proposta = sum(_num(f.get("area_ha")) for f in imovel.get("rl", []))
     rl_exigida = round(area * RL_PCT_PADRAO / 100, 1)
-    deficit = round(max(0.0, rl_exigida - rl_proposta), 1)
+    deficit = round(max(0.0, rl_exigida - rl_proposta), 1) if tem_rl else None
 
     return {
         "municipio": a.get("municipio", ""),
@@ -40,7 +41,7 @@ def analisar(imovel: dict) -> dict:
         "campos_futebol": max(1, round(app_ha)) if app_ha else 0,
         "faixa_app_m": 30,
         "rio_largura": "menos de 10 metros",
-        "tem_rl": bool(imovel.get("rl")),
+        "tem_rl": tem_rl,
         "rl_proposta_ha": round(rl_proposta, 1),
         "rl_exigida_pct": RL_PCT_PADRAO,
         "rl_exigida_ha": rl_exigida,

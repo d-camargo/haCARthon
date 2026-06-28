@@ -29,12 +29,14 @@ ESTILO = {
 }
 
 
-def _desenha(ax, polys, est):
+def _desenha(ax, polys, est, zorder=1, satelite=False):
     for ext, _furos in polys:
         if len(ext) >= 3:
+            lw = est["lw"] * 1.5 if satelite else est["lw"]
             ax.add_patch(
                 MplPolygon(ext, closed=True, facecolor=est["face"],
-                           edgecolor=est["edge"], linewidth=est["lw"], alpha=est["alpha"])
+                           edgecolor=est["edge"], linewidth=lw, alpha=est["alpha"],
+                           zorder=zorder)
             )
 
 
@@ -51,23 +53,67 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
     meta = modo == "meta"
     fig, ax = plt.subplots(figsize=(8, 8), dpi=130)
 
-    _desenha(ax, imovel["perimetro"], ESTILO["perimetro"])
-    app_est = ESTILO["app_meta"] if meta else ESTILO["app"]
-    for f in imovel["app"]:
-        _desenha(ax, f["polys"], app_est)
-    if not meta:  # no mapa-meta, foco na mata ciliar
-        for f in imovel["rl"]:
-            _desenha(ax, f["polys"], ESTILO["rl"])
-
+    # 1. Calcula os limites (bbox) com margem
     b = [9e9, 9e9, -9e9, -9e9]
     _bounds(imovel["perimetro"], b)
     for f in imovel["app"] + imovel["rl"]:
         _bounds(f["polys"], b)
     mx = (b[2] - b[0]) * 0.08 + 1e-4
     my = (b[3] - b[1]) * 0.08 + 1e-4
-    ax.set_xlim(b[0] - mx, b[2] + mx)
-    ax.set_ylim(b[1] - my, b[3] + my)
-    ax.set_aspect(1 / cos(radians((b[1] + b[3]) / 2)))
+    xmin = b[0] - mx
+    ymin = b[1] - my
+    xmax = b[2] + mx
+    ymax = b[3] + my
+
+    # 2. Tenta baixar a imagem de satélite (Esri World Imagery)
+    import urllib.request
+    import urllib.parse
+    import io
+    from PIL import Image
+
+    img = None
+    try:
+        w = 1000
+        aspect = (ymax - ymin) / (xmax - xmin) if (xmax - xmin) > 0 else 1.0
+        aspect_corr = aspect * cos(radians((ymin + ymax) / 2))
+        h = max(200, min(1500, int(w * aspect_corr)))
+        
+        params = {
+            "bbox": f"{xmin},{ymin},{xmax},{ymax}",
+            "bboxSR": "4326",
+            "imageSR": "4326",
+            "size": f"{w},{h}",
+            "format": "jpg",
+            "f": "image"
+        }
+        url = "https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?" + urllib.parse.urlencode(params)
+        
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        )
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            img = Image.open(io.BytesIO(resp.read()))
+    except Exception:
+        # Fallback offline (fundo branco)
+        img = None
+
+    satelite_ok = img is not None
+    if satelite_ok:
+        ax.imshow(img, extent=[xmin, xmax, ymin, ymax], origin="upper", zorder=0)
+
+    # 3. Desenha as feições
+    _desenha(ax, imovel["perimetro"], ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
+    app_est = ESTILO["app_meta"] if meta else ESTILO["app"]
+    for f in imovel["app"]:
+        _desenha(ax, f["polys"], app_est, zorder=2, satelite=satelite_ok)
+    if not meta:  # no mapa-meta, foco na mata ciliar
+        for f in imovel["rl"]:
+            _desenha(ax, f["polys"], ESTILO["rl"], zorder=2, satelite=satelite_ok)
+
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    ax.set_aspect(1 / cos(radians((ymin + ymax) / 2)))
 
     handles = [plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["perimetro"]["face"],
                              edgecolor=ESTILO["perimetro"]["edge"], alpha=0.7,
@@ -83,7 +129,7 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
     municipio = imovel["attrs"].get("municipio", "")
     uf = imovel["attrs"].get("uf", "")
     titulo = ("Como a beira do rio deve ficar"
-              if meta else f"Seu imovel hoje - {municipio}/{uf}".strip(" -/"))
+              if meta else f"Seu imóvel hoje - {municipio}/{uf}".strip(" -/"))
     ax.set_title(titulo, fontsize=13, weight="bold")
     ax.set_xticks([])
     ax.set_yticks([])
