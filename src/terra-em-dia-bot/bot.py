@@ -13,10 +13,11 @@ import logging
 import os
 import tempfile
 
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ChatAction
 from telegram.ext import (
     Application,
+    CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
     ConversationHandler,
@@ -82,14 +83,20 @@ def _restaurar_contexto(update: Update, context: ContextTypes.DEFAULT_TYPE) -> b
 
 
 async def _enviar_mapa(update, context, imovel, modo, caption):
-    await update.message.chat.send_action(ChatAction.UPLOAD_PHOTO)
+    chat = update.effective_chat
+    if not chat:
+        return
+    await chat.send_action(ChatAction.UPLOAD_PHOTO)
     tmp_nome = None
     try:
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             tmp_nome = tmp.name
-        mapa.gerar_mapa(imovel, tmp_nome, modo=modo)
+        if modo == "comparativo":
+            mapa.gerar_comparativo(imovel, tmp_nome)
+        else:
+            mapa.gerar_mapa(imovel, tmp_nome, modo=modo)
         with open(tmp_nome, "rb") as fp:
-            await update.message.reply_photo(photo=fp, caption=caption)
+            await context.bot.send_photo(chat_id=chat.id, photo=fp, caption=caption)
         context.user_data["ultimo_mapa"] = modo
     except Exception as e:  # mapa é um plus; não derruba a conversa
         logger.warning("falha ao gerar mapa (%s): %s", modo, e)
@@ -99,6 +106,15 @@ async def _enviar_mapa(update, context, imovel, modo, caption):
                 os.unlink(tmp_nome)
             except OSError:
                 pass
+
+
+def _teclado_solucao() -> InlineKeyboardMarkup:
+    keyboard = [
+        [InlineKeyboardButton("🌳 Ver como fica em dia", callback_data="sol")],
+        [InlineKeyboardButton("🔍 Comparar agora × depois", callback_data="cmp")],
+        [InlineKeyboardButton("📋 Passos no SICAR", callback_data="sicar")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -131,6 +147,12 @@ async def _apresentar(update, context, imovel) -> int:
     await update.message.reply_text(conteudo.VENDO_CADASTRO)
     await _enviar_mapa(update, context, imovel, "atual", conteudo.CAPTION_ATUAL)
     await update.message.reply_text(conteudo.resumo_imovel(an), parse_mode=MD)
+
+    if an.get("tem_app") or an.get("tem_rl"):
+        await update.message.reply_text(
+            "Posso te mostrar como sua terra fica em dia 👇",
+            reply_markup=_teclado_solucao()
+        )
     return CONVERSA
 
 
@@ -148,6 +170,39 @@ async def comofica_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
     imovel = context.user_data["imovel"]
     await _enviar_mapa(update, context, imovel, "meta", conteudo.CAPTION_META)
+
+
+async def botao(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+
+    if "imovel" not in context.user_data and not _restaurar_contexto(update, context):
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="Por favor, me mande primeiro o número do seu CAR ou a foto da carta."
+        )
+        return
+
+    imovel = context.user_data["imovel"]
+    an = context.user_data["an"]
+
+    data = query.data
+    if data == "sol":
+        await _enviar_mapa(update, context, imovel, "meta", conteudo.CAPTION_META)
+        keyboard = [[InlineKeyboardButton("🔍 Comparar agora × depois", callback_data="cmp")]]
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="Quer ver a diferença aproximando na sua mata e reserva? 👇",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    elif data == "cmp":
+        await _enviar_mapa(update, context, imovel, "comparativo", conteudo.CAPTION_COMPARATIVO)
+    elif data == "sicar":
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=conteudo.guia_acao(an),
+            parse_mode=MD
+        )
 
 
 async def conversa_livre(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -233,6 +288,7 @@ def main() -> None:
     app.add_handler(CommandHandler("mapa", mapa_cmd))
     app.add_handler(CommandHandler("comofica", comofica_cmd))
     app.add_handler(CommandHandler("mapadepois", comofica_cmd))
+    app.add_handler(CallbackQueryHandler(botao))
     app.add_handler(MessageHandler(filters.PHOTO, recebeu_foto))
     app.add_handler(MessageHandler(texto, conversa_livre))
 

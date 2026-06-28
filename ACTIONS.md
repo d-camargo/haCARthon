@@ -1250,6 +1250,11 @@ Diagnóstico do sênior (confirmar antes de mudar):
   APP/RL local não casa o `cod_imovel`**: `cadastro.carregar_imovel` pega o perímetro pelo **WFS** e
   depois filtra os shapefiles locais por `cod_imovel='{cod}'`. Se o código tiver formatação/espaços
   diferentes entre WFS e shapefile (ou o `cod` testado não existir na base local), APP/RL não carregam.
+  **Verificado pelo sênior (28/06):** o `cod` do imóvel-herói (Querência) **enriquece corretamente**
+  (`fonte=wfs`; `tem_app`/`tem_rl` = True; mata ciliar 2,0 ha; RL declarada 8,3 / exigida 17,9 /
+  déficit 9,6). Ou seja, **para os imóveis-demo o dado existe**. Então, se a conversa ainda sai
+  genérica, suspeite (i) de um `cod` testado **fora** da base local, ou (ii) do **fluxo do `bot.py`**
+  não usar o `resumo_imovel`/contexto na resposta — confirme qual `cod` foi testado e trace o caminho.
 - **(B)** Em `bot.py`, o mapa-meta só é enviado quando `conteudo.pediu_mapa(texto)` **e**
   `conteudo.pediu_meta(texto)` são verdadeiros — ou seja, a frase precisa conter "mapa" **e** "deve
   ficar". Se o produtor diz só "como deve ficar", **nada** é enviado. E não existe comando para isso.
@@ -1362,3 +1367,137 @@ PY
 - Atualizado `bot.py` para enviar o mapa meta de forma inteligente mesmo se o usuário não citar a palavra "mapa" caso ele use termos de meta.
 - Implementado envio automático do mapa meta logo após o bot explicar a mata ciliar (verificado se o último mapa enviado não é o meta).
 - Adicionados os comandos explícitos `/mapa` (para mapa atual) e `/comofica` / `/mapadepois` (para mapa meta), devidamente documentados no `README.md`.
+
+---
+
+## ACTION-011 — Bot proativo: botões que oferecem a solução + comparativo "agora × depois" com zoom
+
+status: concluida
+tipo: codigo
+prioridade: alta
+
+### Objetivo
+
+Em vez de esperar o produtor digitar, o bot **sugere a solução com botões** (Telegram inline keyboard):
+oferece o **mapa "como deve ficar"** (a solução) e um **comparativo "agora × depois" com zoom** nas
+feições (mata ciliar e Reserva Legal).
+
+### Contexto
+
+Em teste real, o 2º mapa nunca veio porque o envio dependia de o **usuário** citar "mata/rio". A equipe
+decidiu inverter: o bot **proativamente oferece** os próximos passos em **botões**. Confirmado pelo
+sênior: o `python-telegram-bot 21.11.1` (do venv) suporta `InlineKeyboardButton`,
+`InlineKeyboardMarkup` e `CallbackQueryHandler`. O fluxo-alvo:
+
+1. Manda o CAR → bot mostra "achei sua terra" + **mapa atual** + resumo.
+2. Bot **oferece botões**: 🌳 *Ver como fica em dia* · 🔍 *Comparar agora × depois* · 📋 *Passos no SICAR*.
+3. Clique em 🌳 → envia o **mapa-meta** (a solução) e oferece o 🔍.
+4. Clique em 🔍 → envia o **comparativo "agora × depois"** com **zoom** na APP e na RL.
+5. Clique em 📋 → manda o passo a passo (`guia_acao(an)`).
+
+**Nome do rio: encerrado.** Não buscar hidrografia externa (ver `docs/desenvolver/spike-hidrografia.md`,
+§5: o córrego do imóvel é "sem nome" em todas as fontes). Manter "mato da beira do rio".
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/bot.py`
+- `src/terra-em-dia-bot/mapa.py`
+- `src/terra-em-dia-bot/conteudo.py`
+- `src/terra-em-dia-bot/README.md`
+
+### Arquivos proibidos
+
+- `.env` e afins · `data/**` · `desafio-2/**` · `.sqlite` · `.pdf`
+- `cadastro.py` · `analise.py` · `llm.py` · `memoria.py` (só importar)
+
+### Passos — botões e fluxo (bot.py)
+
+1. Importe `InlineKeyboardButton`, `InlineKeyboardMarkup` (de `telegram`) e `CallbackQueryHandler`
+   (de `telegram.ext`).
+2. Crie um teclado de oferta (função `_teclado_solucao()`), com 3 botões e `callback_data` curtos:
+   - 🌳 "Ver como fica em dia" → `sol`
+   - 🔍 "Comparar agora × depois" → `cmp`
+   - 📋 "Passos no SICAR" → `sicar`
+3. No `_apresentar`, **depois** do `resumo_imovel(an)`: se `an.get("tem_app")` ou `an.get("tem_rl")`,
+   mande uma mensagem curta de oferta (ex.: "Posso te mostrar como sua terra fica em dia 👇") com
+   `reply_markup=_teclado_solucao()`. **Não** despeje os mapas automaticamente — a graça é o clique.
+4. **Refatore `_enviar_mapa`** para funcionar também em callback: troque `update.message...` por
+   `update.effective_chat` (ex.: `await context.bot.send_photo(chat_id=update.effective_chat.id, ...)`
+   e `await update.effective_chat.send_action(...)`). Assim serve para mensagem **e** botão.
+5. Crie `async def botao(update, context)`:
+   - `query = update.callback_query; await query.answer()`.
+   - Recupere `imovel`/`an` de `context.user_data`; se vazio, tente `_restaurar_contexto`; se ainda
+     não houver, peça o número do CAR e retorne.
+   - Roteie por `query.data`: `sol` → `_enviar_mapa(... "meta" ...)` e ofereça de novo o botão 🔍;
+     `cmp` → envia o comparativo (passo 8); `sicar` → manda `conteudo.guia_acao(an)`.
+6. Registre o handler global em `main()`: `app.add_handler(CallbackQueryHandler(botao))` (como o
+   `/metricas`). Não precisa entrar no `ConversationHandler`; `context.user_data` é por usuário.
+7. Mantenha o que a ACTION-010 entregou (`/mapa`, `/comofica`, gatilho por frase) como atalhos.
+
+### Passos — comparativo com zoom (mapa.py)
+
+8. Crie `gerar_comparativo(imovel, saida)` → 1 PNG com **dois painéis lado a lado**: "Agora" (à esq.) e
+   "Como fica em dia" (à dir.):
+   - "Agora": perímetro + mata ciliar **azul** (declarada) + Reserva Legal atual.
+   - "Como fica": perímetro + mata ciliar **verde** (coberta) + Reserva Legal proposta/meta.
+   - **Zoom:** enquadre os dois painéis no **bbox das feições de APP + RL** (com margem), não no imóvel
+     inteiro — é o "zoom nos locais". Reuse `_desenha`, `_bounds`, `ESTILO` e o `set_aspect` já
+     existentes. Título por painel; legenda curta. Salve e devolva o caminho (igual a `gerar_mapa`).
+9. Caption sugerida para o comparativo (constante em `conteudo.py`): "🔍 Sua terra agora × como fica em
+   dia (mata ciliar e Reserva Legal)".
+
+### Passos — fechamento
+
+10. `README.md`: documente o fluxo de botões e o comparativo (e que tudo continua funcionando **sem**
+    LLM e por comando/texto).
+11. Valide, **commit e push** com as travas da ACTION-008. Mensagem sugerida:
+    `Bot: botoes que oferecem a solucao + comparativo agora x depois com zoom`.
+
+### Comandos de validação
+
+```bash
+python -m py_compile src/terra-em-dia-bot/*.py
+```
+
+```bash
+# Gera o comparativo do imovel-heroi (sem Telegram). NAO imprime cod.
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import cadastro, analise, mapa, os
+cods=[l.strip() for l in open("data/imoveis_teste.local.txt") if l.strip() and not l.startswith("#")]
+imv=cadastro.carregar_imovel(cods[0]); an=analise.analisar(imv)
+out=mapa.gerar_comparativo(imv, "/tmp/comparativo.png")
+assert os.path.getsize(out)>0
+print("OK comparativo:", os.path.getsize(out), "bytes | tem_app:", an["tem_app"], "| tem_rl:", an["tem_rl"])
+PY
+```
+
+### Critérios de aceite
+
+- Após mandar o CAR, o bot **oferece botões** (solução / comparar / passos) — sem o usuário pedir.
+- 🌳 envia o mapa "como deve ficar"; 🔍 envia o **comparativo agora × depois com zoom** na APP e RL;
+  📋 manda os passos no SICAR.
+- Os botões funcionam (callback recuperando o imóvel da memória); `_enviar_mapa` funciona em
+  mensagem **e** em clique de botão.
+- `gerar_comparativo` produz um PNG válido para o herói.
+- `/mapa`, `/comofica` e o gatilho por texto continuam funcionando; bot segue rodando **sem** LLM.
+- Validação passa; commit + push feitos.
+
+### Forma errada provável
+
+- Em callback, **não** usar `update.message` (é `None`) — usar `update.effective_chat`/`query.message`.
+- Não quebrar o `ConversationHandler` (registrar o `CallbackQueryHandler` como handler global).
+- Não enquadrar o comparativo no imóvel inteiro — **zoom nas feições** (APP+RL).
+- Não buscar nome de rio (encerrado). Não mexer em `cadastro.py`/`analise.py`.
+- Não deixar o bot dependente de LLM nem quebrar memória/métrica.
+
+### Resultado do executor
+
+- Importados `InlineKeyboardButton`, `InlineKeyboardMarkup` e `CallbackQueryHandler` do python-telegram-bot.
+- Criada a função `_teclado_solucao()` contendo os botões 🌳, 🔍 e 📋.
+- Atualizada a função `_apresentar` para enviar proativamente os botões após exibir o resumo do imóvel.
+- Refatorada a função `_enviar_mapa` para operar com base em `update.effective_chat` e `context.bot.send_photo`, funcionando transparentemente para mensagens diretas de texto/comandos ou cliques em botões inline (callbacks).
+- Implementada a função `botao(update, context)` que responde aos callbacks `sol`, `cmp` e `sicar`. No caso de `sol` (Ver como fica), ela responde oferecendo novamente o botão `cmp` (Comparar agora × depois) para incentivar a exploração visual.
+- Registrado o `CallbackQueryHandler` como handler global na aplicação do bot em `main()`.
+- Criada a função `gerar_comparativo(imovel, saida)` em `mapa.py` que produz uma imagem contendo os painéis "Hoje" (à esquerda, com APP em azul) e "Solução" (à direita, com APP em verde), aplicando zoom automático focado na bounding box das feições locais de APP e RL.
+- Adicionada a constante `CAPTION_COMPARATIVO` no arquivo `conteudo.py`.
+- Atualizado o arquivo `README.md` documentando o fluxo de botões, atalhos, comandos e o comparativo lado a lado com zoom.

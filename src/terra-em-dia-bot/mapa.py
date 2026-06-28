@@ -10,6 +10,10 @@ matplotlib — sem basemap online (funciona offline e em conexão ruim).
 """
 from math import cos, radians
 from pathlib import Path
+import urllib.request
+import urllib.parse
+import io
+from PIL import Image
 
 import matplotlib
 
@@ -135,6 +139,118 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
     ax.set_yticks([])
     for s in ax.spines.values():
         s.set_visible(False)
+
+    fig.tight_layout()
+    fig.savefig(saida, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    return saida
+
+
+def gerar_comparativo(imovel: dict, saida: str | Path) -> Path:
+    saida = Path(saida)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7), dpi=130)
+
+    # 1. Calcula limites de zoom focados nas feições de APP + RL
+    b = [9e9, 9e9, -9e9, -9e9]
+    for f in imovel["app"] + imovel["rl"]:
+        _bounds(f["polys"], b)
+        
+    if b[0] > 8e9:  # Fallback: se não tiver feição local de APP/RL, zoom no perímetro
+        _bounds(imovel["perimetro"], b)
+        
+    mx = (b[2] - b[0]) * 0.08 + 1e-4
+    my = (b[3] - b[1]) * 0.08 + 1e-4
+    xmin = b[0] - mx
+    ymin = b[1] - my
+    xmax = b[2] + mx
+    ymax = b[3] + my
+
+    # 2. Tenta baixar a imagem de satélite para o bbox de zoom
+    img = None
+    try:
+        w = 1000
+        aspect = (ymax - ymin) / (xmax - xmin) if (xmax - xmin) > 0 else 1.0
+        aspect_corr = aspect * cos(radians((ymin + ymax) / 2))
+        h = max(200, min(1500, int(w * aspect_corr)))
+        
+        params = {
+            "bbox": f"{xmin},{ymin},{xmax},{ymax}",
+            "bboxSR": "4326",
+            "imageSR": "4326",
+            "size": f"{w},{h}",
+            "format": "jpg",
+            "f": "image"
+        }
+        url = "https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?" + urllib.parse.urlencode(params)
+        
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        )
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            img = Image.open(io.BytesIO(resp.read()))
+    except Exception:
+        img = None
+
+    satelite_ok = img is not None
+
+    # 3. Painel da esquerda: "Agora" (APP em azul)
+    if satelite_ok:
+        ax1.imshow(img, extent=[xmin, xmax, ymin, ymax], origin="upper", zorder=0)
+    _desenha(ax1, imovel["perimetro"], ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
+    for f in imovel["app"]:
+        _desenha(ax1, f["polys"], ESTILO["app"], zorder=2, satelite=satelite_ok)
+    for f in imovel["rl"]:
+        _desenha(ax1, f["polys"], ESTILO["rl"], zorder=2, satelite=satelite_ok)
+
+    # 4. Painel da direita: "Como deve ficar (Meta)" (APP em verde)
+    if satelite_ok:
+        ax2.imshow(img, extent=[xmin, xmax, ymin, ymax], origin="upper", zorder=0)
+    _desenha(ax2, imovel["perimetro"], ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
+    for f in imovel["app"]:
+        _desenha(ax2, f["polys"], ESTILO["app_meta"], zorder=2, satelite=satelite_ok)
+    for f in imovel["rl"]:
+        _desenha(ax2, f["polys"], ESTILO["rl"], zorder=2, satelite=satelite_ok)
+
+    # 5. Formatação dos eixos, proporção e títulos
+    for ax in (ax1, ax2):
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymin, ymax)
+        ax.set_aspect(1 / cos(radians((ymin + ymax) / 2)))
+        ax.set_xticks([])
+        ax.set_yticks([])
+        for s in ax.spines.values():
+            s.set_visible(False)
+
+    ax1.set_title("Hoje: como está declarada", fontsize=11, weight="bold")
+    ax2.set_title("Solução: como deve ficar", fontsize=11, weight="bold")
+
+    # 6. Legendas curtas
+    h1 = [plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["perimetro"]["face"],
+                        edgecolor=ESTILO["perimetro"]["edge"], alpha=0.7,
+                        label=ESTILO["perimetro"]["label"])]
+    if imovel["app"]:
+        h1.append(plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["app"]["face"],
+                                alpha=0.8, label=ESTILO["app"]["label"]))
+    if imovel["rl"]:
+        h1.append(plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["rl"]["face"],
+                                alpha=0.7, label=ESTILO["rl"]["label"]))
+    ax1.legend(handles=h1, loc="upper right", fontsize=8, framealpha=0.9)
+
+    h2 = [plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["perimetro"]["face"],
+                        edgecolor=ESTILO["perimetro"]["edge"], alpha=0.7,
+                        label=ESTILO["perimetro"]["label"])]
+    if imovel["app"]:
+        h2.append(plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["app_meta"]["face"],
+                                alpha=0.8, label=ESTILO["app_meta"]["label"]))
+    if imovel["rl"]:
+        h2.append(plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["rl"]["face"],
+                                alpha=0.7, label=ESTILO["rl"]["label"]))
+    ax2.legend(handles=h2, loc="upper right", fontsize=8, framealpha=0.9)
+
+    municipio = imovel["attrs"].get("municipio", "")
+    uf = imovel["attrs"].get("uf", "")
+    fig.suptitle(f"Comparativo da terra - {municipio}/{uf}".strip(" -/"), fontsize=13, weight="bold", y=0.98)
 
     fig.tight_layout()
     fig.savefig(saida, bbox_inches="tight", facecolor="white")

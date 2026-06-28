@@ -26,7 +26,13 @@ python bot.py
 
 No Telegram, abra seu bot e mande `/start`.
 
-**Como pedir os mapas no bot:**
+**Fluxo de Botões (Telegram Inline Keyboard):**
+Ao carregar um imóvel do CAR, o bot oferece proativamente botões interativos para guiar o produtor rural:
+- 🌳 **Ver como fica em dia:** Envia o mapa-meta de como a beira do rio/reserva deve ficar.
+- 🔍 **Comparar agora × depois:** Envia um comparativo visual com dois painéis lado a lado, dando **zoom automático** focado nos trechos de mata ciliar (APP) e Reserva Legal (RL).
+- 📋 **Passos no SICAR:** Manda o passo a passo resumido do que fazer.
+
+**Atalhos e Comandos (para fallback/uso direto):**
 - **Mapa atual (Situação hoje):** Envie mensagens naturais como `"me manda o mapa"`, `"quero ver o mapa"` ou use o comando `/mapa`.
 - **Mapa meta (Como deve ficar):** Envie mensagens naturais como `"como deve ficar?"`, `"como fica depois?"`, `"o certo"`, `"depois"` ou use o comando `/comofica` (ou `/mapadepois`).
 
