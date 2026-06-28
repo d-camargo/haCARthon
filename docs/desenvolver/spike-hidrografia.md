@@ -46,3 +46,34 @@ Investigar a viabilidade de consultar fontes externas de hidrografia em tempo re
 1. **Instabilidade:** A dependência de múltiplos endpoints governamentais adicionais (ANA/IBGE) multiplica os pontos de falha e lentidão do bot.
 2. **Frustração do Usuário:** O produtor (Seu Raimundo) poderia receber mensagens confusas como "Seu imóvel fica perto de um rio sem nome no sistema" ou com o nome incorreto do rio devido a generalizações de escala.
 3. **Alternativa Prática para o Futuro:** Em vez de consultar um WFS de hidrografia geral, o bot deve ler a camada de **Hidrografia Declarada** ou **APP** contida no pacote de dados do próprio imóvel. Quando o imóvel for carregado da base local (como na demo de Querência do Norte), as informações de APP já são extraídas das feições reais ali presentes. Para o WFS online (que traz apenas o perímetro), o bot deve continuar tratando a mata ciliar de forma dimensional (presumindo rio com menos de 10m de largura e faixa de 30m), orientando o produtor rural a realizar a conferência detalhada diretamente no SICAR.
+
+---
+
+## 5. Adendo — Hidrografia estadual do PR (IAT / GeoPR) — avaliada em 2026-06-28
+
+Fonte sugerida pela equipe: **IAT / Instituto Água e Terra — ArcGIS Server `geopr.iat.pr.gov.br`**,
+pasta `00_PUBLICACOES` (1.916 serviços). Dados em **EPSG:4674** (lon/lat).
+
+> ⚠️ **Acesso:** o certificado SSL não valida na cadeia padrão — requisições precisam de `curl -k`
+> (ou `ssl.CERT_NONE` no Python). O endpoint **WMSServer/WFSServer** ficou instável (HTTP 000); o que
+> respondeu bem foi a **API REST do ArcGIS** (`.../MapServer/0/query?...&f=json`).
+
+**Camadas relevantes e cobertura (verificado para Querência do Norte, lon -53,6 / lat -23,1):**
+
+| Camada | Conteúdo | Tem nome? | Cobre Querência? |
+|---|---|---|---|
+| `bc_hid_trecho_drenagem_l_10k` | drenagem linear 1:10k (radar) | ❌ só `tipo` | ❌ só leste do PR (-49/-48) |
+| `baseinteg_rios_sudersha` | cursos d'água 1:20k (campo `nome`) | ✅ `nome` | ❌ só RMC/Curitiba (-49,7/-49) |
+| `zee_rios` | cursos d'água detalhados (ZEE-PR) | campo `rio` | ✅ **sim (estadual)** |
+| `plerh_hid_l_mma_projeto_guarani` | cursos d'água (PLERH) | ✅ `nome` | ✅ sim |
+
+**Teste no imóvel-herói (Querência):** `zee_rios` → **1 curso cruza a propriedade, `rio = "sem nome"`**;
+`plerh` → 2 cursos, `nome = "SIN NOMBRE"`. **Conclusão:** mesmo nas bases estaduais detalhadas que
+cobrem a região, o córrego da propriedade **é anônimo** — confirma o achado das bases nacionais.
+
+**Recomendação (mantida):**
+- **Nome do rio: NÃO integrar** — a fonte existe e cobre o PR, mas o curso d'água do imóvel é "sem
+  nome". Manter "mato da beira do rio".
+- **Geometria do rio: disponível** (`zee_rios` cobre o estado). É o caminho para, no futuro, **derivar
+  a faixa de APP de 30 m** sobre o traçado real (Retificação Dinamizada) — geoprocessamento, não nome.
+  Acesso documentado aqui para quando isso for priorizado.
