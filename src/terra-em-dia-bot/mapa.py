@@ -146,24 +146,25 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
     return saida
 
 
-def gerar_comparativo(imovel: dict, saida: str | Path) -> Path:
+def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> Path | None:
     saida = Path(saida)
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7), dpi=130)
 
-    # 1. Calcula limites de zoom focados nas feições de APP + RL
+    # 1. Calcula limites de zoom focados na feição escolhida
     b = [9e9, 9e9, -9e9, -9e9]
-    for f in imovel["app"] + imovel["rl"]:
+    for f in imovel.get(feicao, []):
         _bounds(f["polys"], b)
         
-    if b[0] > 8e9:  # Fallback: se não tiver feição local de APP/RL, zoom no perímetro
-        _bounds(imovel["perimetro"], b)
+    if b[0] > 8e9:
+        return None  # Feição vazia
         
-    mx = (b[2] - b[0]) * 0.08 + 1e-4
-    my = (b[3] - b[1]) * 0.08 + 1e-4
+    mx = (b[2] - b[0]) * 0.18 + 1e-4
+    my = (b[3] - b[1]) * 0.18 + 1e-4
     xmin = b[0] - mx
     ymin = b[1] - my
     xmax = b[2] + mx
     ymax = b[3] + my
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7), dpi=130)
 
     # 2. Tenta baixar a imagem de satélite para o bbox de zoom
     img = None
@@ -194,23 +195,28 @@ def gerar_comparativo(imovel: dict, saida: str | Path) -> Path:
 
     satelite_ok = img is not None
 
-    # 3. Painel da esquerda: "Agora" (APP em azul)
+    # Estilos customizados para contraste real
+    est_hoje = ESTILO["app"].copy()
+    est_hoje["face"] = "none"
+    est_hoje["alpha"] = 1.0
+    est_hoje["lw"] = 2.0  # contorno visível
+
+    est_em_dia = ESTILO["app_meta"].copy()
+    est_em_dia["alpha"] = 0.8  # verde sólido
+
+    # 3. Painel da esquerda: "Hoje" (contorno/chão apenas)
     if satelite_ok:
         ax1.imshow(img, extent=[xmin, xmax, ymin, ymax], origin="upper", zorder=0)
     _desenha(ax1, imovel["perimetro"], ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
     for f in imovel["app"]:
-        _desenha(ax1, f["polys"], ESTILO["app"], zorder=2, satelite=satelite_ok)
-    for f in imovel["rl"]:
-        _desenha(ax1, f["polys"], ESTILO["rl"], zorder=2, satelite=satelite_ok)
+        _desenha(ax1, f["polys"], est_hoje, zorder=2, satelite=satelite_ok)
 
-    # 4. Painel da direita: "Como deve ficar (Meta)" (APP em verde)
+    # 4. Painel da direita: "Como deve ficar (Meta)" (verde sólido)
     if satelite_ok:
         ax2.imshow(img, extent=[xmin, xmax, ymin, ymax], origin="upper", zorder=0)
     _desenha(ax2, imovel["perimetro"], ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
     for f in imovel["app"]:
-        _desenha(ax2, f["polys"], ESTILO["app_meta"], zorder=2, satelite=satelite_ok)
-    for f in imovel["rl"]:
-        _desenha(ax2, f["polys"], ESTILO["rl"], zorder=2, satelite=satelite_ok)
+        _desenha(ax2, f["polys"], est_em_dia, zorder=2, satelite=satelite_ok)
 
     # 5. Formatação dos eixos, proporção e títulos
     for ax in (ax1, ax2):
@@ -222,35 +228,29 @@ def gerar_comparativo(imovel: dict, saida: str | Path) -> Path:
         for s in ax.spines.values():
             s.set_visible(False)
 
-    ax1.set_title("Hoje: como está declarada", fontsize=11, weight="bold")
-    ax2.set_title("Solução: como deve ficar", fontsize=11, weight="bold")
+    ax1.set_title("Hoje: a beira do rio", fontsize=12, weight="bold")
+    ax2.set_title("Em dia: coberta de mato 🌳", fontsize=12, weight="bold")
 
     # 6. Legendas curtas
     h1 = [plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["perimetro"]["face"],
                         edgecolor=ESTILO["perimetro"]["edge"], alpha=0.7,
                         label=ESTILO["perimetro"]["label"])]
     if imovel["app"]:
-        h1.append(plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["app"]["face"],
-                                alpha=0.8, label=ESTILO["app"]["label"]))
-    if imovel["rl"]:
-        h1.append(plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["rl"]["face"],
-                                alpha=0.7, label=ESTILO["rl"]["label"]))
+        h1.append(plt.Rectangle((0, 0), 1, 1, facecolor="none", edgecolor=est_hoje["edge"],
+                                linewidth=2.0, label="Área que precisa de mata ciliar"))
     ax1.legend(handles=h1, loc="upper right", fontsize=8, framealpha=0.9)
 
     h2 = [plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["perimetro"]["face"],
                         edgecolor=ESTILO["perimetro"]["edge"], alpha=0.7,
                         label=ESTILO["perimetro"]["label"])]
     if imovel["app"]:
-        h2.append(plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["app_meta"]["face"],
-                                alpha=0.8, label=ESTILO["app_meta"]["label"]))
-    if imovel["rl"]:
-        h2.append(plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["rl"]["face"],
-                                alpha=0.7, label=ESTILO["rl"]["label"]))
+        h2.append(plt.Rectangle((0, 0), 1, 1, facecolor=est_em_dia["face"],
+                                alpha=0.8, label=est_em_dia["label"]))
     ax2.legend(handles=h2, loc="upper right", fontsize=8, framealpha=0.9)
 
     municipio = imovel["attrs"].get("municipio", "")
     uf = imovel["attrs"].get("uf", "")
-    fig.suptitle(f"Comparativo da terra - {municipio}/{uf}".strip(" -/"), fontsize=13, weight="bold", y=0.98)
+    fig.suptitle(f"Comparativo da beira do rio - {municipio}/{uf}".strip(" -/"), fontsize=13, weight="bold", y=0.98)
 
     fig.tight_layout()
     fig.savefig(saida, bbox_inches="tight", facecolor="white")

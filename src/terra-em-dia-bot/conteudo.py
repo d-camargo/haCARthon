@@ -29,7 +29,7 @@ VENDO_CADASTRO = "Achei a sua terra! Vou te mandar um mapa para podermos olhar j
 
 CAPTION_ATUAL = "📍 O seu sítio hoje"
 CAPTION_META = "🌳 Assim a beira do rio deve ficar: coberta de mato"
-CAPTION_COMPARATIVO = "🔍 Sua terra agora × como fica em dia (mata ciliar e Reserva Legal)"
+CAPTION_COMPARATIVO = "🔍 A beira do rio: hoje × coberta de mato"
 
 
 def intro_sitio(an: dict) -> str:

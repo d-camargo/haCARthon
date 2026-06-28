@@ -29,7 +29,7 @@ No Telegram, abra seu bot e mande `/start`.
 **Fluxo de Botões (Telegram Inline Keyboard):**
 Ao carregar um imóvel do CAR, o bot oferece proativamente botões interativos para guiar o produtor rural:
 - 🌳 **Ver como fica em dia:** Envia o mapa-meta de como a beira do rio/reserva deve ficar.
-- 🔍 **Comparar agora × depois:** Envia um comparativo visual com dois painéis lado a lado, dando **zoom automático** focado nos trechos de mata ciliar (APP) e Reserva Legal (RL).
+- 🔍 **Comparar agora × depois:** Envia um comparativo visual com dois painéis lado a lado, dando **zoom automático** focado diretamente na beira do rio (APP) para manter as faixas nítidas e visíveis. A Reserva Legal, por não possuir demarcação geométrica futura pré-definida, é informada de maneira transparente via texto/anotação na conversa para evitar dados fictícios.
 - 📋 **Passos no SICAR:** Manda o passo a passo resumido do que fazer.
 
 **Atalhos e Comandos (para fallback/uso direto):**

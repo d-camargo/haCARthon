@@ -1501,3 +1501,106 @@ PY
 - Criada a função `gerar_comparativo(imovel, saida)` em `mapa.py` que produz uma imagem contendo os painéis "Hoje" (à esquerda, com APP em azul) e "Solução" (à direita, com APP em verde), aplicando zoom automático focado na bounding box das feições locais de APP e RL.
 - Adicionada a constante `CAPTION_COMPARATIVO` no arquivo `conteudo.py`.
 - Atualizado o arquivo `README.md` documentando o fluxo de botões, atalhos, comandos e o comparativo lado a lado com zoom.
+
+---
+
+## ACTION-012 — Corrigir o comparativo: zoom POR FEIÇÃO e diferença visível
+
+status: pronta
+tipo: codigo
+prioridade: alta
+
+### Objetivo
+
+Fazer o comparativo "agora × depois" **realmente dar zoom na feição** (a mata ciliar enche o quadro) e
+mostrar uma **diferença visível** entre os dois lados.
+
+### Contexto
+
+O `gerar_comparativo` atual enquadra a **bounding box de APP + RL juntas**. Medido pelo sênior no
+imóvel-herói: APP sozinha ≈ **320×614 m**, RL ≈ **511×682 m**, mas **APP+RL juntas ≈ 930×1568 m** —
+quase o sítio inteiro (1039×1731 m). Resultado: a faixa de 30 m vira um fio **invisível**. Além disso,
+hoje a **única** diferença entre os painéis é a **cor** da APP (azul→verde); a RL é desenhada **igual**
+dos dois lados. Por isso "nem dá pra ver diferença".
+
+**Limite honesto da RL:** temos só a geometria da **RL declarada** (8,3 ha). **Não existe** a geometria
+do "depois" (os 9,6 ha a recompor são um número, não um polígono). Então **não forje** um antes/depois
+de RL com polígonos diferentes — seria inventar dado.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+- `src/terra-em-dia-bot/bot.py`
+- `src/terra-em-dia-bot/conteudo.py`
+- `src/terra-em-dia-bot/README.md`
+
+### Arquivos proibidos
+
+- `.env` e afins · `data/**` · `desafio-2/**` · `.sqlite` · `.pdf`
+- `cadastro.py` · `analise.py` · `llm.py` · `memoria.py` (só importar)
+
+### Passos
+
+1. Em `mapa.py`, dê ao `gerar_comparativo` o parâmetro **`feicao="app"`**. O zoom passa a usar **só o
+   bbox da feição escolhida** (`imovel[feicao]`), com margem ~15–20%. Para a APP isso enquadra ~320×614 m
+   e a faixa fica grande/visível. Se `imovel[feicao]` estiver vazio, retorne `None` (o chamador trata).
+2. **Crie contraste real** (não só cor):
+   - Painel **"Hoje"**: satélite de fundo + a faixa **só com contorno** (sem preenchimento, ou bem
+     translúcida) — assim aparece o **chão atual** (muitas vezes plantio até a margem).
+   - Painel **"Em dia"**: satélite de fundo + a faixa **preenchida de verde sólido/opaco**
+     (`ESTILO["app_meta"]` com alpha alto) — representando o mato recomposto.
+   - Mesmo bbox apertado nos dois painéis; títulos "Hoje: a beira do rio" e "Em dia: coberta de mato 🌳".
+3. **Reserva Legal — sem antes/depois falso:** **não** desenhe a RL diferente dos dois lados. Se quiser
+   um visual de RL, gere (com `feicao="rl"`) **um único enquadramento** da RL declarada **com anotação**
+   "declarado 8,3 ha · falta 9,6 ha a recompor" (usar os números de `analise`, não fixos). Ou deixe a RL
+   só no texto da conversa (que já diz declarado/exige/falta). **Recomendado:** o comparativo visual é o
+   da **APP**; a RL fica como número/anotação.
+4. Em `bot.py`, no callback do botão 🔍 (`cmp`): envie o **comparativo da APP**
+   (`gerar_comparativo(imovel, tmp, feicao="app")`). Se `an["tem_rl"]`, complemente com **uma frase**
+   curta do déficit (ou o enquadramento anotado da RL, se fizer o do passo 3). Reuse o envio por
+   `effective_chat` que a ACTION-011 deixou em `_enviar_mapa`.
+5. `conteudo.py`: ajuste `CAPTION_COMPARATIVO` para a APP ("🔍 A beira do rio: hoje × coberta de mato").
+6. `README.md`: registre que o comparativo agora dá **zoom na feição** e que a RL aparece como número
+   (não como antes/depois de polígono).
+7. Valide, **commit e push** (travas da ACTION-008). Mensagem: `Bot: comparativo com zoom na APP e contraste real (hoje x em dia)`.
+
+### Comandos de validação
+
+```bash
+python -m py_compile src/terra-em-dia-bot/*.py
+```
+
+```bash
+# Gera o comparativo da APP e confirma que o enquadramento e' ~APP (bem menor que o sitio). NAO imprime cod.
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import cadastro, mapa, os
+cods=[l.strip() for l in open("data/imoveis_teste.local.txt") if l.strip() and not l.startswith("#")]
+imv=cadastro.carregar_imovel(cods[0])
+out=mapa.gerar_comparativo(imv, "/tmp/comp_app.png", feicao="app")
+assert out and os.path.getsize(out)>0
+def w(polys):
+    xs=[x for ext,_ in polys for x,y in ext]; return max(xs)-min(xs)
+app=[p for f in imv["app"] for p in f["polys"]]
+assert w(app) < 0.7*w(imv["perimetro"]), "zoom ainda enquadra o sitio todo"
+print("OK comparativo APP:", os.path.getsize(out), "bytes | zoom na APP confirmado")
+PY
+```
+
+### Critérios de aceite
+
+- O comparativo da **APP** enquadra a faixa (não o sítio inteiro) — a mata ciliar fica **grande e
+  visível**.
+- Há **diferença visível** entre "Hoje" (contorno/chão) e "Em dia" (verde sólido).
+- A RL **não** é desenhada como antes/depois falso; aparece como número/anotação (déficit real).
+- Botão 🔍 manda o comparativo certo; bot segue funcionando sem LLM; validação passa; commit + push.
+
+### Forma errada provável
+
+- Não enquadrar APP+RL juntas — **uma feição por vez**.
+- Não fingir geometria de "depois" da RL (só temos a declarada + o número).
+- Não deixar o contraste só na cor — usar contorno (hoje) × preenchido (em dia).
+- Não mexer em `cadastro.py`/`analise.py`.
+
+### Resultado do executor
+
+Preencher depois da execução.

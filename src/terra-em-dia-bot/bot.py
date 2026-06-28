@@ -92,7 +92,13 @@ async def _enviar_mapa(update, context, imovel, modo, caption):
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             tmp_nome = tmp.name
         if modo == "comparativo":
-            mapa.gerar_comparativo(imovel, tmp_nome)
+            ret = mapa.gerar_comparativo(imovel, tmp_nome, feicao="app")
+            if ret is None:
+                await context.bot.send_message(
+                    chat_id=chat.id,
+                    text="Não foi possível gerar o comparativo porque sua propriedade não possui mata ciliar mapeada localmente."
+                )
+                return
         else:
             mapa.gerar_mapa(imovel, tmp_nome, modo=modo)
         with open(tmp_nome, "rb") as fp:
@@ -197,6 +203,16 @@ async def botao(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
     elif data == "cmp":
         await _enviar_mapa(update, context, imovel, "comparativo", conteudo.CAPTION_COMPARATIVO)
+        if an.get("tem_rl") and an.get("rl_deficit_ha", 0) > 0:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=(
+                    f"E sobre a Reserva Legal: sua terra tem um déficit de *{an['rl_deficit_ha']} ha* "
+                    "a compensar ou recompor. Não desenhamos a Reserva no mapa acima porque não há "
+                    "uma área demarcada ainda, mas esse ajuste é feito na regularização."
+                ),
+                parse_mode=MD
+            )
     elif data == "sicar":
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
