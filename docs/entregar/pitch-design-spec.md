@@ -10,7 +10,7 @@
 ## 1. Sistema de design
 
 ### Logo / ícone
-- Arquivos na **raiz do projeto**: `icon.png` (1024², fundo transparente) e `icon.svg` (vetor — preferir o SVG para escalar sem perder nitidez).
+- Arquivos em **`docs/entregar/assets/`**: `icon.png` (1024², fundo transparente) e `icon.svg` (vetor — preferir o SVG para escalar sem perder nitidez). Foto da persona: `docs/entregar/assets/Seu_Raimundo.png`.
 - O ícone é um **brasão verde**: folha + mapa dobrado com grade + pin lima + campos.
 - **Uso:** ele é o logo do produto. Aparece grande na **capa (slide 1)** e pequeno no **rodapé/canto** dos demais. Nunca distorça (manter proporção) nem coloque sobre fundo verde-escuro sem o contorno branco que ele já tem.
 - **Lockup do nome:** ao lado/abaixo do ícone, "**Terra em Dia**" em verde-floresta; subtítulo fino "O Código Florestal explicado pra sua terra".
@@ -51,7 +51,7 @@
 ### Assets reais a usar (não usar placeholder genérico onde houver o real)
 - **Mapa "atual"** e **mapa "como deve ficar"**: gerados pelo bot (`mapa.gerar_mapa`, modos `atual`/`meta`) — agora **com satélite de fundo**. Exportar 2 PNGs do imóvel-demo e usar nos slides 5 (e 1, como textura sutil).
 - **Print do bot** (conversa real no Telegram) — 1 recorte vertical limpo para o slide 5.
-- **Foto do produtor** (slide 1) e **fachada "Casa da Agricultura"** (se usar) — **stock do Canva** (produtor rural brasileiro, +50, chapéu/camisa simples). Rotular a Casa da Agricultura como **ilustrativa**.
+- **Foto do produtor** (slides 1 e 8): usar **`docs/entregar/assets/Seu_Raimundo.png`** (asset oficial da equipe). **Fachada "Casa da Agricultura"** (se usar): stock do Canva, rotular como **ilustrativa**.
 
 ---
 
@@ -137,5 +137,6 @@
 - **Consistência:** mesmo rodapé, mesma família tipográfica e mesma posição do logo em todos.
 - **Ritmo de cor:** claro (1,2) → escuro (3) → claro (4,5,6,7) → escuro (8). Dá respiro e ênfase.
 - **Acento lima** só em: número-herói (slide 2) e cartão "mede o entendimento" (slide 6). Não espalhar.
-- **Exportar** como apresentação 16:9; a equipe grava a narração por cima (voz humana, ≤3:00).
+- **Exportar** como apresentação 16:9 **horizontal**; a equipe grava a narração por cima (voz humana, ≤3:00).
+- **Regra da Live 08 (obrigatória):** o pitch é **slides estáticos em PDF** — **sem GIF, sem vídeo, sem animação**. Salvar PDF e gravar a voz por cima; subir no YouTube (público ou **não listado** — privado **desclassifica**). Referência de dados pode ficar pequenininha no slide.
 - **Conteúdo dos slides 2 e 5 fechado** — todos os números em `evidencias-pitch.md`. Não resta ⚠️ de dados; só reconferir os painéis no dia da gravação. **Não versionar o `cod_imovel` do herói** (fica só no `.env`/arquivo local).

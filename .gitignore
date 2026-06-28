@@ -26,6 +26,8 @@ data/**
 !src/poc-sobreposicao/saida/sobreposicoes.geojson
 # Artefatos gerados da PoC que NÃO devem ser versionados
 src/poc-sobreposicao/saida/*.sqlite
+# Bancos SQLite em qualquer lugar (ex.: desafio-2/.../saida/poc.sqlite) — nunca versionar
+*.sqlite
 
 # Sistema operacional / editores
 .DS_Store

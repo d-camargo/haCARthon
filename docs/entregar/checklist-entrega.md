@@ -45,18 +45,27 @@
 - ❌ Não prometer liberação de crédito (é decisão do banco). ❌ Não dizer que o bot executa no SICAR.
 - ❌ Não mostrar nº de CAR real legível na tela.
 
-## 3. Pitch de 3 min — slides + voz
+> **Live 08:** o **protótipo é só "como funciona"** (o bot funcionando). Problema, impacto e **validação**
+> moram no **pitch**. Então mantenha as cenas 0–1 (carta/Casa da Agricultura) **curtas** — a locução
+> ajuda a conduzir, mas o foco do vídeo é a conversa real com os 2 mapas.
+
+## 3. Pitch de 3 min — slides + voz (regras da Live 08)
 - [ ] Montar os **8 slides** de `pitch-terra-em-dia.md` no **Canva** (pouco texto; os 2 mapas + 1 print).
-- [ ] Conferir o **dado do slide 2** (~10% validados) e a fonte antes de afirmar.
-- [ ] Gravar a **narração com voz de um integrante** (⚠️ **não pode ser IA**), seguindo os tempos (fecha em 3:00).
-- [ ] Ensaiar com **cronômetro**; não passar de 3:00.
-- [ ] Subir no **YouTube** (pode ser "não listado"); **copiar o link**.
-- [ ] Colar o link do pitch na plataforma da entrega.
+      **Slides ESTÁTICOS** — ⚠️ **sem GIF, sem vídeo, sem animação** (é PDF estático).
+- [ ] Slides na **horizontal (16:9)**. Referência dos dados pequenininha no slide (slides 2 e 5).
+- [ ] Gravar a **narração com voz de um integrante** (⚠️ **não pode ser IA**; **sem rosto**, só voz), nos tempos (fecha em 3:00).
+- [ ] Ensaiar com **cronômetro**; **máx. 3:00** — passou, **desclassifica**.
+- [ ] Subir no **YouTube** como **público ou "não listado"** (⚠️ **privado desclassifica**); **copiar o link**.
+- [ ] Colar o link na entrega de pitch **+ descrever como a equipe usou IA** (campo da entrega: pesquisa,
+      ideação, estruturação dos slides, arte — deixar claro que a **voz não foi IA**).
+- [ ] Lembrar: os jurados veem **ideação → pitch → protótipo**; o pitch tem que se sustentar sozinho
+      (problema, **insight**, solução, como funciona macro, **validação**, diferencial, impacto).
 
 ---
 
 ## Sequência sugerida para hoje
-1. **Júnior:** executa ACTION-004→006 (motor online + satélite) e valida.
+1. **Júnior:** motor online + satélite + ACTION-010 (dados na conversa + 2º mapa) **feitos**; falta a
+   ACTION-011 (2º mapa proativo + nome do rio) para o vídeo ficar redondo.
 2. **Em paralelo (equipe):** monta os slides do pitch no Canva e ensaia a narração.
 3. **Depois do júnior:** grava a **tela do bot** (vídeo 2 min) com o bot já melhorado.
 4. **Grava a voz** do pitch; sobe no YouTube.

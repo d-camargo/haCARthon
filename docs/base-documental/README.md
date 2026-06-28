@@ -42,6 +42,8 @@ docs/base-documental/
 | `pitch.md` | Resumo da Live 04 — como construir o pitch (estrutura, slides, gravação) | Montar o pitch e o vídeo |
 | `Live_05_orientacoes-entrega-tiraduvidas.md` | Transcrição da Live 05 — orientações de entrega (ideação/protótipo/pitch), prazos e tira-dúvidas | Conferir regras de entrega e validações da coordenação |
 | `Live_06_tiraduvidas-desafios.md` | Transcrição da Live 06 — tira-dúvidas exclusivo dos desafios (com a coordenação do CAR) | Validações de escopo do D3 (IA p/ legislação, aceite no SICAR, etc.) |
+| `Live_08_orientacoes-entrega-pitch.md` | Transcrição da Live 08 — **regras da entrega do pitch** (3 min, slides estáticos em PDF, voz humana, YouTube público/não listado, campo de uso de IA) | **Conferir as regras finais do pitch antes de gravar/enviar** |
+| `Estrutura-Amendoeira-Pitch.md` | Modelo "Amendoeira" de pitch para hackathons (8 beats: problema → insight → solução → como funciona → benefícios → viabilidade → diferencial → encerramento) | Estruturar/revisar o roteiro do pitch |
 | `Identificacao_oportunidades.pdf` | Guia de identificação de oportunidades (imersão, jornada, JTBD) | Descobrir e enquadrar o problema |
 | `ideacao_prototipacao.pdf` | Slides de ideação e prototipação (versão completa) | Apoiar a ideação |
 | `ideacao_prototipacao_compressed.pdf` | Mesma apresentação, versão leve | Leitura rápida |
