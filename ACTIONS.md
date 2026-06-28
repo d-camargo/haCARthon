@@ -2469,5 +2469,72 @@ O texto gerado na ACTION-024 orientava o produtor a "baixar o Módulo de Cadastr
 ### Resultado do executor
 
 - Substituídas as menções a "baixar Módulo de Cadastro" por "entrar no site do SICAR e fazer login com a conta gov.br" em `conteudo.py` (função `guia_acao` e constante `REGRAS`).
+### Resultado do executor
+
+- Substituídas as menções a "baixar Módulo de Cadastro" por "entrar no site do SICAR e fazer login com a conta gov.br" em `conteudo.py` (função `guia_acao` e constante `REGRAS`).
 - Ajustada a regra correspondente no `SYSTEM` prompt em `llm.py` para reforçar a ausência de download e preferência por login com a conta gov.br.
 - Validada a compilação e executados os testes com sucesso.
+
+---
+
+## ACTION-026 — Rotação Inteligente do Mapa e Rosa dos Ventos
+
+status: pronta
+tipo: codigo
+prioridade: media
+
+### Objetivo
+
+Para melhorar a leitura do mapa pelo produtor rural, o imóvel precisa estar sempre "em pé" (na vertical, o mais reto possível), e o rio (mata ciliar/APP) deve ficar preferencialmente posicionado na parte **inferior** do mapa. Ao rotacionar a visualização, é obrigatório exibir uma Seta do Norte (ou Rosa dos Ventos) apontando para o norte geográfico verdadeiro, para evitar desorientação.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+
+### Estratégia de Implementação (Obrigatória)
+
+Não tente rotacionar os dados usando `ogr` e não tente passar `rotation` para a API da Esri, pois isso causaria um inferno de bounding boxes. Faça a rotação exclusivamente na visualização (Matplotlib) usando Transformações Afins:
+
+1. **Baixar imagem com margem maior:** Na chamada para baixar a imagem satélite, aumente a bounding box (ex: puxe a distância do centróide até o ponto mais distante do imóvel e multiplique por 1.5). Assim, ao girar a imagem no Matplotlib, os cantos não ficarão brancos.
+2. **Calcular o ângulo ideal (θ):** 
+   - Extraia as coordenadas do polígono do imóvel.
+   - Use PCA (ex: `numpy.cov` e autovetores, ou encontre a Minimum Bounding Box usando Shapely ou geometria simples) para descobrir o ângulo do eixo principal do imóvel.
+   - Avalie os 4 ângulos ortogonais gerados (eixo principal, +90, +180, +270).
+   - Calcule o vetor que liga o centróide do imóvel ao centróide da APP (rio). Rotacione esse vetor por cada um dos 4 candidatos.
+   - O ângulo vencedor ($\theta$) é aquele em que a componente Y do centróide da APP (rotacionado) é a menor possível, ou seja, onde o rio cai para o fundo da tela.
+3. **Aplicar no Matplotlib:**
+   - Crie a transformação: `import matplotlib.transforms as mtransforms`
+   - `t = mtransforms.Affine2D().translate(-cx, -cy).rotate_deg(theta).translate(cx, cy) + ax.transData` (onde cx, cy é o centróide do imóvel).
+   - Injete `transform=t` como argumento em **todos** os métodos de desenho: `ax.imshow()`, `ax.plot()`, `ax.fill()`, `ax.annotate()`.
+4. **Seta do Norte:**
+   - Adicione uma Seta do Norte no canto superior do mapa apontando nativamente para cima (ex: do ponto `(x, y)` para `(x, y + delta)`).
+   - Se você passar o mesmo `transform=t` para essa seta, ela girará *junto* com o mapa, apontando incrivelmente para o Norte Geográfico real independentemente da rotação final! Dica: Você pode desenhar a seta relativamente aos cantos do bbox já rotacionado para que ela fique no canto da tela.
+
+### Passos
+1. Implemente a lógica matemática descrita acima em uma função auxiliar em `mapa.py` (ex: `_calcular_rotacao`).
+2. Aplique a transformação em todos os elementos de desenho.
+3. Desenhe a Rosa dos Ventos ou Seta do Norte.
+4. Teste localmente garantindo que a imagem final exportada (tanto o mapa unitário quanto o comparativo) não tem cantos cortados e o imóvel está verticalizado.
+5. **Commit e push**. Mensagem: `Bot: aplica rotacao inteligente ao mapa para manter rio na base e imovel em pe, com norte dinamico`.
+
+### Comandos de validação
+
+```bash
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import mapa, cadastro
+imv = cadastro.carregar_imovel(open("data/imoveis_teste.local.txt").readline().strip())
+mapa.gerar_mapa(imv, "/tmp/teste_rotacao_hoje.png", meta=False)
+mapa.gerar_comparativo(imv, "/tmp/teste_rotacao_cmp.png")
+print("OK. Abrir e verificar se o imovel esta em pe, o rio esta na base, os cantos tem satelite, e a seta do Norte esta visivel.")
+PY
+```
+
+### Critérios de aceite
+
+- O rio fica visível preferencialmente na parte de baixo.
+- A seta apontando para o Norte é claramente visível na tela e acompanha o giro.
+- Os cantos da imagem (fora do perímetro) continuam preenchidos por satélite.
+
+### Resultado do executor
+
+Preencher depois da execução.

@@ -34,15 +34,92 @@ ESTILO = {
 }
 
 
-def _desenha(ax, polys, est, zorder=1, satelite=False):
+def _desenha(ax, polys, est, zorder=1, satelite=False, transform=None):
     for ext, _furos in polys:
         if len(ext) >= 3:
             lw = est["lw"] * 1.5 if satelite else est["lw"]
             ax.add_patch(
                 MplPolygon(ext, closed=True, facecolor=est["face"],
                            edgecolor=est["edge"], linewidth=lw, alpha=est["alpha"],
-                           zorder=zorder)
+                           zorder=zorder, transform=transform)
             )
+
+
+def _rotate_pt(x, y, cx, cy, theta_deg):
+    import math
+    rad = math.radians(theta_deg)
+    cos_a = math.cos(rad)
+    sin_a = math.sin(rad)
+    rx = cx + (x - cx) * cos_a - (y - cy) * sin_a
+    ry = cy + (x - cx) * sin_a + (y - cy) * cos_a
+    return rx, ry
+
+
+def _rotate_polys(polys, cx, cy, theta):
+    rotated = []
+    for ext, furos in polys:
+        ext_rot = [_rotate_pt(tx, ty, cx, cy, theta) for tx, ty in ext]
+        furos_rot = [[_rotate_pt(tx, ty, cx, cy, theta) for tx, ty in f] for f in furos]
+        rotated.append((ext_rot, furos_rot))
+    return rotated
+
+
+def _calcular_rotacao(imovel: dict, perimetro_utm: list, app_utm: list):
+    import numpy as np
+    import math
+    
+    pts = []
+    for ext, _ in perimetro_utm:
+        for x, y in ext:
+            pts.append((x, y))
+            
+    if not pts:
+        return 0.0, 0.0, 0.0
+        
+    pts = np.array(pts)
+    cx, cy = np.mean(pts, axis=0)
+    
+    pts_centered = pts - [cx, cy]
+    if len(pts_centered) < 2:
+        return cx, cy, 0.0
+        
+    cov = np.cov(pts_centered.T)
+    if cov.shape != (2, 2) or np.any(np.isnan(cov)) or np.any(np.isinf(cov)):
+        return cx, cy, 0.0
+        
+    evals, evecs = np.linalg.eigh(cov)
+    idx_max = np.argmax(evals)
+    v_principal = evecs[:, idx_max]
+    
+    angle_base = math.degrees(math.atan2(v_principal[1], v_principal[0]))
+    candidatos = [angle_base, angle_base + 90, angle_base + 180, angle_base + 270]
+    
+    app_pts = []
+    for f in app_utm:
+        for ext, _ in f["polys"]:
+            for x, y in ext:
+                app_pts.append((x, y))
+                
+    if not app_pts:
+        return cx, cy, 90.0 - angle_base
+        
+    app_pts = np.array(app_pts)
+    app_cx, app_cy = np.mean(app_pts, axis=0)
+    
+    v_app = np.array([app_cx - cx, app_cy - cy])
+    
+    melhor_theta = 0.0
+    menor_y = 1e18
+    
+    for theta in candidatos:
+        rot_deg = 90.0 - theta
+        rad = math.radians(rot_deg)
+        y_rot = v_app[0] * math.sin(rad) + v_app[1] * math.cos(rad)
+        if y_rot < menor_y:
+            menor_y = y_rot
+            melhor_theta = rot_deg
+            
+    return cx, cy, melhor_theta
 
 
 def _bounds(polys, b):
@@ -167,17 +244,49 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
             "area_ha": f.get("area_ha")
         })
 
-    # 1. Calcula os limites (bbox) com margem em metros
-    b = [9e9, 9e9, -9e9, -9e9]
-    _bounds(perimetro_utm, b)
-    for f in app_utm + rl_utm:
-        _bounds(f["polys"], b)
-    mx = (b[2] - b[0]) * 0.08 + 1e-4
-    my = (b[3] - b[1]) * 0.08 + 1e-4
-    xmin = b[0] - mx
-    ymin = b[1] - my
-    xmax = b[2] + mx
-    ymax = b[3] + my
+    # Calcula rotação inteligente e centróide
+    cx, cy, theta = _calcular_rotacao(imovel, perimetro_utm, app_utm)
+
+    # Define o que desenhar para a APP
+    if meta:
+        app_desenhar = _gerar_buffer_app(app_utm, perimetro_utm)
+    else:
+        app_desenhar = []
+        for f in app_utm:
+            app_desenhar.extend(f["polys"])
+
+    # Rotaciona para calcular o bounding box correto em coordenadas rotacionadas
+    perimetro_rot = _rotate_polys(perimetro_utm, cx, cy, theta)
+    app_rot = _rotate_polys(app_desenhar, cx, cy, theta)
+    rl_rot = []
+    if not meta:
+        for f in rl_utm:
+            rl_rot.extend(_rotate_polys(f["polys"], cx, cy, theta))
+
+    b_rot = [9e9, 9e9, -9e9, -9e9]
+    _bounds(perimetro_rot, b_rot)
+    _bounds(app_rot, b_rot)
+    _bounds(rl_rot, b_rot)
+
+    mx = (b_rot[2] - b_rot[0]) * 0.08 + 1e-4
+    my = (b_rot[3] - b_rot[1]) * 0.08 + 1e-4
+    xmin_rot = b_rot[0] - mx
+    ymin_rot = b_rot[1] - my
+    xmax_rot = b_rot[2] + mx
+    ymax_rot = b_rot[3] + my
+
+    # 1. Calcula os limites do download em coordenadas não rotacionadas com margem maior (evitar cantos brancos)
+    import math
+    dist_max = 100.0
+    for ext, _ in perimetro_utm:
+        for x, y in ext:
+            dist_max = max(dist_max, math.hypot(x - cx, y - cy))
+
+    mx_dl = dist_max * 1.5
+    xmin_dl = cx - mx_dl
+    ymin_dl = cy - mx_dl
+    xmax_dl = cx + mx_dl
+    ymax_dl = cy + mx_dl
 
     # 2. Tenta baixar a imagem de satélite (Esri World Imagery)
     import urllib.request
@@ -187,7 +296,8 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
 
     img = None
     try:
-        aspect = (ymax - ymin) / (xmax - xmin) if (xmax - xmin) > 0 else 1.0
+        # A escala é baseada nas dimensões do download real
+        aspect = (ymax_dl - ymin_dl) / (xmax_dl - xmin_dl) if (xmax_dl - xmin_dl) > 0 else 1.0
         MAXDIM = 1400
         if aspect >= 1:
             h = MAXDIM
@@ -200,7 +310,7 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
         
         import json
         params = {
-            "bbox": f"{xmin},{ymin},{xmax},{ymax}",
+            "bbox": f"{xmin_dl},{ymin_dl},{xmax_dl},{ymax_dl}",
             "bboxSR": str(epsg_utm),
             "imageSR": str(epsg_utm),
             "size": f"{w},{h}",
@@ -231,28 +341,51 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
         extent_real = None
 
     satelite_ok = img is not None and extent_real is not None
+
+    # Aplica transformação afim no Matplotlib para rotação
+    import matplotlib.transforms as mtransforms
+    t = mtransforms.Affine2D().translate(-cx, -cy).rotate_deg(theta).translate(cx, cy) + ax.transData
+
     if satelite_ok:
-        ax.imshow(img, extent=[extent_real["xmin"], extent_real["xmax"], extent_real["ymin"], extent_real["ymax"]], origin="upper", zorder=0)
+        ax.imshow(img, extent=[extent_real["xmin"], extent_real["xmax"], extent_real["ymin"], extent_real["ymax"]],
+                  origin="upper", zorder=0, transform=t)
 
     # 3. Desenha as feições
-    _desenha(ax, perimetro_utm, ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
+    _desenha(ax, perimetro_utm, ESTILO["perimetro"], zorder=1, satelite=satelite_ok, transform=t)
     app_est = ESTILO["app_meta"] if meta else ESTILO["app"]
 
-    if meta:
-        app_desenhar = _gerar_buffer_app(app_utm, perimetro_utm)
-    else:
-        app_desenhar = []
-        for f in app_utm:
-            app_desenhar.extend(f["polys"])
-
-    _desenha(ax, app_desenhar, app_est, zorder=2, satelite=satelite_ok)
+    _desenha(ax, app_desenhar, app_est, zorder=2, satelite=satelite_ok, transform=t)
     if not meta:  # no mapa-meta, foco na mata ciliar
         for f in rl_utm:
-            _desenha(ax, f["polys"], ESTILO["rl"], zorder=2, satelite=satelite_ok)
+            _desenha(ax, f["polys"], ESTILO["rl"], zorder=2, satelite=satelite_ok, transform=t)
 
-    ax.set_xlim(xmin, xmax)
-    ax.set_ylim(ymin, ymax)
+    ax.set_xlim(xmin_rot, xmax_rot)
+    ax.set_ylim(ymin_rot, ymax_rot)
     ax.set_aspect("equal")
+
+    # Seta do Norte no canto superior direito
+    arrow_x, arrow_y = 0.92, 0.90
+    rad_north = math.radians(theta)
+    dx = -0.04 * math.sin(rad_north)
+    dy = 0.04 * math.cos(rad_north)
+    ax.annotate(
+        "",
+        xy=(arrow_x + dx, arrow_y + dy),
+        xytext=(arrow_x, arrow_y),
+        textcoords="axes fraction",
+        xycoords="axes fraction",
+        arrowprops=dict(facecolor="black", edgecolor="black", width=1.5, headwidth=5, headlength=5, shrink=0),
+        zorder=5
+    )
+    ax.text(
+        arrow_x + 1.4 * dx,
+        arrow_y + 1.4 * dy,
+        "N",
+        transform=ax.transAxes,
+        ha="center", va="center",
+        fontsize=9, weight="bold", color="black",
+        zorder=5
+    )
 
     res_app = geo_app.medir_app(imovel)
     if res_app:
@@ -317,34 +450,70 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
             "area_ha": f.get("area_ha")
         })
 
+    # Calcula rotação inteligente e centróide
+    cx, cy, theta = _calcular_rotacao(imovel, perimetro_utm, app_utm)
+
     # Se a feição for 'app', geramos a APP ideal via Buffer + Intersect no Perímetro (ACTION-020)
     app_meta_polys = _gerar_buffer_app(app_utm, perimetro_utm) if feicao == "app" else []
     if feicao != "app":
         for f in app_utm:
             app_meta_polys.extend(f["polys"])
 
-    # 1. Calcula limites de zoom focados na feição escolhida em UTM
-    b = [9e9, 9e9, -9e9, -9e9]
-    camada_alvo = app_utm if feicao == "app" else rl_utm
-    for f in camada_alvo:
-        _bounds(f["polys"], b)
+    # 1. Calcula limites de zoom focados na feição escolhida no espaço rotacionado
+    b_rot = [9e9, 9e9, -9e9, -9e9]
+    if feicao == "app":
+        app_rot = []
+        for f in app_utm:
+            app_rot.extend(_rotate_polys(f["polys"], cx, cy, theta))
+        _bounds(app_rot, b_rot)
+    else:
+        rl_rot = []
+        for f in rl_utm:
+            rl_rot.extend(_rotate_polys(f["polys"], cx, cy, theta))
+        _bounds(rl_rot, b_rot)
         
-    if b[0] > 8e9:
+    if b_rot[0] > 8e9:
         return None  # Feição vazia
         
-    mx = (b[2] - b[0]) * 0.18 + 1e-4
-    my = (b[3] - b[1]) * 0.18 + 1e-4
-    xmin = b[0] - mx
-    ymin = b[1] - my
-    xmax = b[2] + mx
-    ymax = b[3] + my
+    mx = (b_rot[2] - b_rot[0]) * 0.18 + 1e-4
+    my = (b_rot[3] - b_rot[1]) * 0.18 + 1e-4
+    xmin_rot = b_rot[0] - mx
+    ymin_rot = b_rot[1] - my
+    xmax_rot = b_rot[2] + mx
+    ymax_rot = b_rot[3] + my
+
+    # Rotaciona de volta as 4 quinas do bbox de zoom rotacionado para saber a bbox de download original
+    corners_rot = [
+        (xmin_rot, ymin_rot),
+        (xmax_rot, ymin_rot),
+        (xmin_rot, ymax_rot),
+        (xmax_rot, ymax_rot)
+    ]
+    corners_unrot = [_rotate_pt(tx, ty, cx, cy, -theta) for tx, ty in corners_rot]
+    xmin_dl = min(x for x, y in corners_unrot)
+    ymin_dl = min(y for x, y in corners_unrot)
+    xmax_dl = max(x for x, y in corners_unrot)
+    ymax_dl = max(y for x, y in corners_unrot)
+
+    # Adiciona margem de segurança no download para evitar cantos brancos ao girar
+    mx_dl = (xmax_dl - xmin_dl) * 0.15 + 1e-4
+    my_dl = (ymax_dl - ymin_dl) * 0.15 + 1e-4
+    xmin_dl -= mx_dl
+    ymin_dl -= my_dl
+    xmax_dl += mx_dl
+    ymax_dl += my_dl
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7), dpi=130)
 
-    # 2. Tenta baixar a imagem de satélite para o bbox de zoom
+    # 2. Tenta baixar a imagem de satélite para o bbox de zoom original
     img = None
+    import math
+    import urllib.request
+    import urllib.parse
+    import io
+    from PIL import Image
     try:
-        aspect = (ymax - ymin) / (xmax - xmin) if (xmax - xmin) > 0 else 1.0
+        aspect = (ymax_dl - ymin_dl) / (xmax_dl - xmin_dl) if (xmax_dl - xmin_dl) > 0 else 1.0
         MAXDIM = 1400
         if aspect >= 1:
             h = MAXDIM
@@ -357,7 +526,7 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
         
         import json
         params = {
-            "bbox": f"{xmin},{ymin},{xmax},{ymax}",
+            "bbox": f"{xmin_dl},{ymin_dl},{xmax_dl},{ymax_dl}",
             "bboxSR": str(epsg_utm),
             "imageSR": str(epsg_utm),
             "size": f"{w},{h}",
@@ -397,25 +566,32 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
     est_em_dia = ESTILO["app_meta"].copy()
     est_em_dia["alpha"] = 0.8  # verde sólido
 
+    # Cria transforms afins para cada eixo
+    import matplotlib.transforms as mtransforms
+    t1 = mtransforms.Affine2D().translate(-cx, -cy).rotate_deg(theta).translate(cx, cy) + ax1.transData
+    t2 = mtransforms.Affine2D().translate(-cx, -cy).rotate_deg(theta).translate(cx, cy) + ax2.transData
+
     # 3. Painel da esquerda: "Hoje" (contorno/chão apenas)
     if satelite_ok:
-        ax1.imshow(img, extent=[extent_real["xmin"], extent_real["xmax"], extent_real["ymin"], extent_real["ymax"]], origin="upper", zorder=0)
-    _desenha(ax1, perimetro_utm, ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
+        ax1.imshow(img, extent=[extent_real["xmin"], extent_real["xmax"], extent_real["ymin"], extent_real["ymax"]],
+                  origin="upper", zorder=0, transform=t1)
+    _desenha(ax1, perimetro_utm, ESTILO["perimetro"], zorder=1, satelite=satelite_ok, transform=t1)
     for f in app_utm:
-        _desenha(ax1, f["polys"], est_hoje, zorder=2, satelite=satelite_ok)
+        _desenha(ax1, f["polys"], est_hoje, zorder=2, satelite=satelite_ok, transform=t1)
 
     # 4. Painel da direita: "Como deve ficar (Meta)" (verde sólido com buffer ideal)
     if satelite_ok:
-        ax2.imshow(img, extent=[extent_real["xmin"], extent_real["xmax"], extent_real["ymin"], extent_real["ymax"]], origin="upper", zorder=0)
-    _desenha(ax2, perimetro_utm, ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
-    _desenha(ax2, app_meta_polys, est_em_dia, zorder=2, satelite=satelite_ok)
+        ax2.imshow(img, extent=[extent_real["xmin"], extent_real["xmax"], extent_real["ymin"], extent_real["ymax"]],
+                  origin="upper", zorder=0, transform=t2)
+    _desenha(ax2, perimetro_utm, ESTILO["perimetro"], zorder=1, satelite=satelite_ok, transform=t2)
+    _desenha(ax2, app_meta_polys, est_em_dia, zorder=2, satelite=satelite_ok, transform=t2)
 
-    # Adiciona a cota visual de 30m no painel da solução (ax2)
-    cx = (xmin + xmax) / 2
-    cy = (ymin + ymax) / 2
+    # Adiciona a cota visual de 30m no painel da solução (ax2) no centro rotacionado
+    cx_anno = (xmin_rot + xmax_rot) / 2
+    cy_anno = (ymin_rot + ymax_rot) / 2
     ax2.annotate(
         "Faixa legal:\n30m da margem",
-        xy=(cx, cy),
+        xy=(cx_anno, cy_anno),
         xytext=(0, 20),
         textcoords="offset points",
         ha="center", va="center",
@@ -427,13 +603,37 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
 
     # 5. Formatação dos eixos, proporção e títulos
     for ax in (ax1, ax2):
-        ax.set_xlim(xmin, xmax)
-        ax.set_ylim(ymin, ymax)
+        ax.set_xlim(xmin_rot, xmax_rot)
+        ax.set_ylim(ymin_rot, ymax_rot)
         ax.set_aspect("equal")
         ax.set_xticks([])
         ax.set_yticks([])
         for s in ax.spines.values():
             s.set_visible(False)
+
+        # Seta do Norte em cada painel
+        arrow_x, arrow_y = 0.92, 0.90
+        rad_north = math.radians(theta)
+        dx = -0.04 * math.sin(rad_north)
+        dy = 0.04 * math.cos(rad_north)
+        ax.annotate(
+            "",
+            xy=(arrow_x + dx, arrow_y + dy),
+            xytext=(arrow_x, arrow_y),
+            textcoords="axes fraction",
+            xycoords="axes fraction",
+            arrowprops=dict(facecolor="black", edgecolor="black", width=1.5, headwidth=5, headlength=5, shrink=0),
+            zorder=5
+        )
+        ax.text(
+            arrow_x + 1.4 * dx,
+            arrow_y + 1.4 * dy,
+            "N",
+            transform=ax.transAxes,
+            ha="center", va="center",
+            fontsize=9, weight="bold", color="black",
+            zorder=5
+        )
 
     ax1.set_title("Hoje: a beira do rio", fontsize=12, weight="bold")
     ax2.set_title("Em dia: faixa de 30m coberta 🌳", fontsize=12, weight="bold")
