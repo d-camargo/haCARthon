@@ -68,6 +68,7 @@ O projeto permite selecionar imóveis de demonstração da base local e simular 
 | `bot.py` | Handlers do Telegram e fluxo da conversa |
 | `cadastro.py` | Lê perímetro + APP + RL por `cod_imovel` (osgeo/GDAL) — motor de dados reais |
 | `analise.py` | Regras do Código Florestal: faixa de APP, RL exigida × proposta, déficit |
+| `geo_app.py` | Medição geométrica da largura média e área legal da APP (GDAL/OGR) |
 | `mapa.py` | Renderiza o PNG do imóvel com as feições (matplotlib, offline) |
 | `conteudo.py` | Textos na linguagem do Raimundo + roteiro de fallback + `compreendeu()` |
 | `llm.py` | LLM **agnóstico** (interface OpenAI-compatible; `base_url` configurável) |
@@ -77,6 +78,7 @@ O projeto permite selecionar imóveis de demonstração da base local e simular 
 ## Notas
 - **Dados reais** do SICAR (base oficial do Paraná/Brasil). O acesso aos dados é centralizado em `cadastro.carregar_imovel(cod)`. O motor tenta primeiro consultar a API WFS oficial em tempo real para obter o perímetro e atributos de qualquer imóvel do Brasil. Caso a consulta falhe ou não haja conexão, o motor cai de forma automática para a base local offline. Para imóveis que não possuem dados de APP/RL declarados na base local, a análise do bot opera de forma dimensional (mata ciliar de 30 m) e não calcula déficit de Reserva Legal. **O bot presume os pontos de atenção a partir dos dados do CAR carregados**, eliminando a necessidade do produtor decifrar ou interpretar a notificação sozinho.
 - **Mapas com imagem de satélite:** Os mapas gerados para o produtor rural (`mapa.py`) utilizam a imagem de satélite **Esri World Imagery** como fundo, facilitando a identificação visual da área. Caso ocorra erro de download ou indisponibilidade de conexão, há um fallback automático para o fundo branco offline tradicional. O cálculo da proporção da imagem no serviço de exportação foi corrigido para utilizar a razão do bounding box em graus diretamente, removendo o fator de correção de latitude `cos(lat)` na requisição da imagem (que causava distorções). Isso garante o alinhamento perfeito entre as linhas dos vetores e as feições do satélite.
+- **Medição da APP e Base Legal:** O módulo `geo_app.py` realiza a reprojeção dos polígonos de APP de EPSG:4674 para UTM SIRGAS 2000 (zona dependente da longitude do imóvel) com ordem tradicional GIS para calcular a área real (Shoelace) e o perímetro do anel externo em metros. A largura média é estimada pela heurística `largura_media ≈ 2 * área / perímetro`. A área legal recomendada (escala para os 30 metros de largura mínima exigidos da margem pelo Código Florestal, Lei 12.651/12, Art. 4º, I, alínea 'a' para rios de até 10 metros) é projetada proporcionalmente. Esses valores são aproximados e auxiliam no confronto de déficit de mata ciliar.
 - **Agnóstico de modelo:** `OPENAI_BASE_URL` aponta para a OpenAI na demo ou para
   um modelo aberto/local (Ollama, vLLM) — coerente com o CAR como Bem Público Digital.
 - **Funciona sem LLM:** sem `OPENAI_API_KEY`, o bot usa o roteiro de `conteudo.py`.

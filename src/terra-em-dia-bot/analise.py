@@ -31,7 +31,7 @@ def analisar(imovel: dict) -> dict:
     rl_exigida = round(area * RL_PCT_PADRAO / 100, 1)
     deficit = round(max(0.0, rl_exigida - rl_proposta), 1) if tem_rl else None
 
-    return {
+    res = {
         "municipio": a.get("municipio", ""),
         "uf": a.get("uf", ""),
         "area_ha": round(area, 1),
@@ -47,3 +47,13 @@ def analisar(imovel: dict) -> dict:
         "rl_exigida_ha": rl_exigida,
         "rl_deficit_ha": deficit,
     }
+
+    try:
+        import geo_app
+        m = geo_app.medir_app(imovel)
+        if m:
+            res.update(m)
+    except Exception:
+        pass
+
+    return res

@@ -1729,3 +1729,220 @@ PY
 - Atualizado o prompt `SYSTEM` e o dicionário `_contexto_imovel` em `llm.py` para renomear os rótulos de APP ("Área total da faixa de APP a manter com mato") e instruir o modelo de linguagem a usar uma unidade por vez e orientar a conferência da cobertura real sem inventar que a faixa já está recomposta.
 - Corrigido o cálculo da altura da imagem `h` nas funções `gerar_mapa` e `gerar_comparativo` em `mapa.py` para usar a razão direta de graus `(ymax - ymin) / (xmax - xmin)` sem multiplicar por `cos(lat)`. Isso resolveu a distorção do serviço de exportação do ArcGIS/Esri, fazendo com que o satélite alinhe perfeitamente com os vetores.
 - Atualizado o arquivo `README.md` explicando a correção de aspecto do satélite.
+
+---
+
+## ACTION-014 — Satélite ainda desalinhado: o clamp da altura quebra o aspect
+
+status: concluida
+tipo: codigo
+prioridade: alta
+
+### Objetivo
+
+Terminar o alinhamento satélite × vetores: o `cos(lat)` já saiu (ACTION-013), mas o **clamp em 1500**
+da altura ainda desfaz o aspect quando o bbox é "alto".
+
+### Contexto
+
+Em `mapa.py` (nas duas funções) o tamanho da imagem é `h = max(200, min(1500, int(w * aspect)))` com
+`w = 1000`. Quando `w * aspect > 1500`, o `h` é **cortado para 1500** e a razão `w/h` deixa de bater com
+`dx/dy` do bbox → o Esri devolve um recorte **mais largo** que o pedido → **desalinha**.
+
+Medido pelo sênior no imóvel-herói:
+- `gerar_mapa` (imóvel): aspect **1,53** → h_ideal 1532 → **clampa para 1500**.
+- `gerar_comparativo` (APP): aspect **1,77** → h_ideal 1768 → **clampa para 1500**.
+
+Já provado antes: quando `size` tem o aspect **exato** do bbox, o Esri devolve **exatamente** o bbox.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+- `src/terra-em-dia-bot/README.md`
+
+### Arquivos proibidos
+
+- `.env` e afins · `data/**` · `desafio-2/**` · `.sqlite` · `.pdf`
+- `bot.py` · `conteudo.py` · `cadastro.py` · `analise.py` · `llm.py` · `memoria.py` (só importar)
+
+### Passos
+
+1. Em `mapa.py`, **nas duas funções** (`gerar_mapa` e `gerar_comparativo`), troque o cálculo de `w,h`
+   por um que **preserva o aspect dentro de um teto** (ex.: 1400 px). Direção:
+   ```python
+   aspect = (ymax - ymin) / (xmax - xmin) if (xmax - xmin) > 0 else 1.0
+   MAXDIM = 1400
+   if aspect >= 1:           # bbox mais alto que largo
+       h = MAXDIM; w = int(MAXDIM / aspect)
+   else:                     # mais largo que alto
+       w = MAXDIM; h = int(MAXDIM * aspect)
+   w = max(200, w); h = max(200, h)
+   ```
+   Assim `w/h` continua igual a `dx/dy` e o Esri devolve o bbox certo. **Não** volte a usar `cos(lat)`
+   aqui (a correção de latitude continua sendo o `set_aspect(1/cos(lat))` no eixo).
+2. (Alternativa mais robusta, vale para qualquer caso) em vez do passo 1, peça `f=json`, leia o
+   `extent` que o Esri devolve e use **esse** extent no `imshow`. Se fizer assim, o alinhamento
+   independe do tamanho. Escolha **uma** das duas abordagens.
+3. `README.md`: ajuste a nota — o satélite alinha por **aspect preservado** (sem clamp que distorça).
+4. Valide, **commit e push** (travas da ACTION-008). Mensagem:
+   `Bot: satelite alinhado de vez (preserva aspect no tamanho, sem clamp)`.
+
+### Comandos de validação
+
+```bash
+python -m py_compile src/terra-em-dia-bot/*.py
+```
+
+```bash
+# Para o bbox real do heroi, o extent devolvido pelo Esri tem que bater com o pedido.
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import json, urllib.request, ssl, cadastro
+ctx=ssl.create_default_context(); ctx.check_hostname=False; ctx.verify_mode=ssl.CERT_NONE
+imv=cadastro.carregar_imovel(open("data/imoveis_teste.local.txt").readline().strip())
+xs=[x for ext,_ in imv["perimetro"] for x,y in ext]; ys=[y for ext,_ in imv["perimetro"] for x,y in ext]
+xmin,xmax,ymin,ymax=min(xs),max(xs),min(ys),max(ys)
+aspect=(ymax-ymin)/(xmax-xmin); MAX=1400
+if aspect>=1: h=MAX; w=int(MAX/aspect)
+else: w=MAX; h=int(MAX*aspect)
+url=("https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?"
+     f"bbox={xmin},{ymin},{xmax},{ymax}&bboxSR=4326&imageSR=4326&size={w},{h}&format=jpg&f=json")
+e=json.load(urllib.request.urlopen(url,timeout=20,context=ctx))["extent"]
+dx=xmax-xmin
+assert abs(e["xmin"]-xmin)<dx*0.01 and abs(e["xmax"]-xmax)<dx*0.01, "extent != bbox (ainda desalinha)"
+print("OK extent bate com o bbox (w,h=",w,h,")")
+PY
+```
+
+### Critérios de aceite
+
+- Para o bbox do imóvel e o da APP, o **extent devolvido pelo Esri == bbox pedido** (sem o clamp
+  distorcer).
+- Satélite alinhado nos mapas atual, meta e comparativo.
+- Validação passa; commit + push.
+
+### Forma errada provável
+
+- Não cortar só a altura (quebra o aspect) — **reduzir w e h juntos** mantendo a razão.
+- Não reintroduzir `cos(lat)` no tamanho.
+- Não mexer em `bot.py`/`cadastro.py`/`analise.py`.
+
+### Resultado do executor
+
+- Substituído o cálculo de `w` e `h` em `gerar_mapa` e `gerar_comparativo` no arquivo `mapa.py` por uma lógica que preserva a proporção (`aspect`) do bounding box. Se o bbox for mais alto que largo (`aspect >= 1`), definimos a altura `h` como o teto máximo de 1400 e escalamos a largura `w = int(1400 / aspect)`. Se for mais largo, definimos `w` como 1400 e escalamos a altura `h = int(1400 * aspect)`.
+- Isso garante que a proporção geodésica seja perfeitamente preservada nas chamadas do ArcGIS/Esri, evitando que o clamp em um único eixo distorça o recorte retornado e desalinhe os vetores em relação ao satélite.
+- Atualizado o `README.md` com a nova nota.
+
+---
+
+## ACTION-015 — APP: confrontar o declarado com a lei (largura e área)
+
+status: concluida
+tipo: codigo
+prioridade: alta
+
+### Objetivo
+
+Medir a faixa de APP **declarada** (do vetor que já temos) e **confrontar com a lei**: a largura média
+× **30 m** e a área declarada × a área mínima legal. A conversa passa a dizer "tem X / a lei pede Y /
+falta Z" também para a mata ciliar (como já faz na RL).
+
+### Base legal (conferida no PDF — `legislacao/L12651.pdf`, art. 4º, I)
+
+- APP de curso d'água: faixa marginal **medida "desde a borda da calha do leito regular"** (a **margem**,
+  **não o eixo**), largura mínima **30 m para cursos d'água de menos de 10 m de largura** (alínea "a").
+- "Leito regular: a calha por onde correm regularmente as águas do curso d'água durante o ano."
+
+### Contexto e método (sem rede — só o vetor da APP que já temos)
+
+Não precisa do rio externo (o spike mostrou que é instável). O vetor da **APP declarada** já dá tudo:
+- Reprojete os polígonos da APP de **EPSG:4674** para **UTM SIRGAS 2000** (metros). Zona pela longitude:
+  `zona = int((lon+180)/6)+1`; `epsg = 31960 + zona` (Querência/PR → **31982**).
+- **Use a feição `app_rio_ate_10`** (é a mata ciliar que o `analise` já usa).
+- **Largura média** ≈ `2 * área / perímetro` (heurística de faixa). **Área** pela fórmula do
+  shoelace; **perímetro** somando os segmentos do anel externo. ⚠️ **Não** use `UnionCascaded()` nem
+  `geom.Boundary().Length()` do GDAL aqui — deram **segfault** no ambiente; faça a conta manual sobre os
+  pontos já transformados.
+- **Área legal aproximada** (escala para 30 m): `area_legal ≈ area_declarada * 30 / largura_media`.
+
+Números do herói (referência p/ validar): `app_rio_ate_10` → área **2,0 ha**, largura média **~27 m**,
+falta **~3 m**, área legal **~2,2 ha**.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/geo_app.py` (criar — medição pura, sem rede)
+- `src/terra-em-dia-bot/analise.py` (chamar a medição e expor os campos)
+- `src/terra-em-dia-bot/conteudo.py`
+- `src/terra-em-dia-bot/llm.py`
+- `src/terra-em-dia-bot/README.md`
+
+### Arquivos proibidos
+
+- `.env` e afins · `data/**` · `desafio-2/**` · `.sqlite` · `.pdf`
+- `bot.py` · `cadastro.py` · `mapa.py` · `memoria.py` (só importar)
+
+### Passos
+
+1. Crie `geo_app.py` com `medir_app(imovel) -> dict | None`:
+   - Pega a feição `app_rio_ate_10` (se não houver, retorna `None`).
+   - Reprojeta para UTM (zona pela longitude do 1º ponto), calcula `area_ha`, `largura_media_m`
+     (2A/P) e `area_legal_ha` (escala p/ 30 m). Conta **manual** (shoelace + soma de segmentos).
+   - Devolve `{"app_largura_m", "app_faixa_legal_m": 30, "app_area_decl_ha", "app_area_legal_ha",
+     "app_falta_m": max(0, 30 - largura), "app_falta_ha": max(0, legal - decl)}`. Tudo arredondado.
+2. Em `analise.analisar`, chame `geo_app.medir_app(imovel)` (dentro de try) e **funda** os campos no
+   dicionário de retorno. Se vier `None`, não quebre — siga sem esses campos.
+3. Em `conteudo.py` (`resumo_imovel`/`explica_mata`), quando houver `app_largura_m`, confronte de forma
+   honesta e **uma unidade por vez**. Direção:
+   - "A lei pede uma faixa de **30 m** de mato na beira do rio (medidos da margem). A sua faixa
+     declarada tem em média **~27 m** — então faltam uns **~3 m** pra chegar nos 30 m."
+   - (opcional, em ha) "Em área dá perto de **2 ha** hoje; pra fechar os 30 m, uns **2,2 ha**."
+   - Diga que são **valores aproximados** e que o ajuste fino é **no SICAR**. Se a largura já for ≥ 30 m,
+     parabenize ("sua faixa já está dentro do que a lei pede").
+4. Em `llm.py` `_contexto_imovel`, exponha os novos campos (largura declarada, 30 m, falta) e instrua o
+   modelo a usar o confronto **uma unidade por vez**, como **aproximado**, sem inventar.
+5. `README.md`: registre a medição da APP (largura média 2A/P + área legal aproximada) e a base legal
+   (30 m da margem, art. 4º, I).
+6. Valide, **commit e push** (travas da ACTION-008). Mensagem:
+   `Bot: confronta APP declarada x lei (largura ~Xm vs 30m e area)`.
+
+### Comandos de validação
+
+```bash
+python -m py_compile src/terra-em-dia-bot/*.py
+```
+
+```bash
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import cadastro, analise, geo_app
+cod=open("data/imoveis_teste.local.txt").readline().strip()
+imv=cadastro.carregar_imovel(cod)
+m=geo_app.medir_app(imv)
+assert m and 15 <= m["app_largura_m"] <= 35, m            # ~17 m no heroi
+assert m["app_faixa_legal_m"] == 30
+an=analise.analisar(imv)
+assert "app_largura_m" in an, "analise nao expos a largura"
+print("OK | largura:", m["app_largura_m"], "m | falta:", m["app_falta_m"], "m | legal:", m["app_area_legal_ha"], "ha")
+PY
+```
+
+### Critérios de aceite
+
+- A conversa confronta a mata ciliar: **largura declarada (~27 m) × 30 m** (e/ou área declarada × legal),
+  **uma unidade por vez**, marcada como **aproximada**, mandando ajustar no SICAR.
+- A medição é **pura/local** (sem rede), com fallback se não houver APP.
+- Não usa `UnionCascaded`/`Boundary().Length()` (segfault). A RL continua como está.
+- Bot segue sem LLM; validações passam; commit + push.
+
+### Forma errada provável
+
+- Não medir 30 m **do eixo** — a lei é **da margem** (mas a medição da largura do polígono já é correta).
+- Não afirmar a largura como exata — é **média/aproximada**.
+- Não usar `UnionCascaded()`/`Boundary()` do GDAL (segfault) — conta manual.
+- Não trazer rio externo (IAT/WFS) nesta tarefa — fica para um próximo ciclo.
+- Não mexer em `cadastro.py`/`mapa.py`/`bot.py`.
+
+### Resultado do executor
+
+- Criado o arquivo `geo_app.py` com a função `medir_app(imovel)` que localiza a feição `app_rio_ate_10`, reprojeta seus vértices de EPSG:4674 para UTM SIRGAS 2000 (zona dinâmica pela longitude de referência) aplicando a estratégia de eixos do GIS tradicional (`OAMS_TRADITIONAL_GIS_ORDER`), e computa manualmente a área (Shoelace) e o perímetro em metros, resultando em uma largura média e cálculo aproximado de déficit/área legal em relação aos 30 metros exigidos pela lei desde a margem.
+- Integrada a chamada de `medir_app(imovel)` em `analise.py` fundindo os dados no dicionário de análise.
+- Atualizados os módulos `conteudo.py` e `llm.py` para exibir e instruir o modelo no confronto da largura média declarada versus a exigência de 30 metros, de forma honesta, tratada como aproximada e com uma unidade de medida por vez.
+- Documentado o novo módulo `geo_app.py` e a base legal de medição de APP em `README.md`.

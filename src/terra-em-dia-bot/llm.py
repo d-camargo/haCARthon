@@ -49,6 +49,7 @@ SYSTEM = (
     "- Nunca prometa liberação automática de crédito rural (a decisão final é sempre do banco).\n"
     "- Nunca afirme que a faixa de APP já está coberta de mato; quando não houver informação sobre a cobertura real, oriente o produtor a conferir a cobertura atual diretamente no mapa ou na própria terra.\n"
     "- Ao falar de mata ciliar, use apenas uma unidade por vez (se citar metros, explique a largura da faixa; se citar hectares, explique a área total da faixa a ser mantida com mato, sem misturar os dois na mesma frase).\n"
+    "- Ao confrontar a mata ciliar com a lei, trate as medições como aproximadas e use uma unidade por vez para explicar o déficit (ex.: largura média declarada vs 30 metros exigidos; ou área da faixa declarada vs legal).\n"
     "- Baseie-se apenas nos dados reais da propriedade fornecidos, no histórico e nas regras abaixo. "
     "Se não souber de algo, diga com respeito que precisa confirmar.\n\n" + conteudo.REGRAS
 )
@@ -67,11 +68,15 @@ def _client():
 def _contexto_imovel(an: dict) -> str:
     tem_app_str = "Sim" if an.get("tem_app") else "Não"
     tem_rl_str = "Sim" if an.get("tem_rl") else "Não"
+    
+    app_info = f"Tem Mata ciliar (APP de rio): {tem_app_str}. Área total da faixa de APP (a manter com mato): {an['app_mata_ciliar_ha']} ha; faixa exigida {an['faixa_app_m']} m de largura (rio com largura: {an['rio_largura']})."
+    if "app_largura_m" in an:
+        app_info += f" Medições da APP declarada (aproximadas): largura média declarada {an['app_largura_m']} m, falta {an['app_falta_m']} m para os 30 m exigidos; área legal recomendada {an['app_area_legal_ha']} ha (falta {an['app_falta_ha']} ha)."
+
     return (
         "Dados do imóvel do produtor (use nas respostas):\n"
         f"- Município: {an['municipio']}/{an['uf']}; área {an['area_ha']} ha.\n"
-        f"- Tem Mata ciliar (APP de rio): {tem_app_str}. Área total da faixa de APP (a manter com mato): {an['app_mata_ciliar_ha']} ha; faixa exigida "
-        f"{an['faixa_app_m']} m de largura (rio com largura: {an['rio_largura']}).\n"
+        f"- {app_info}\n"
         f"- Tem Reserva Legal: {tem_rl_str}. Reserva Legal exigida: {an['rl_exigida_pct']}% (~{an['rl_exigida_ha']} ha); "
         f"proposta: {an['rl_proposta_ha']} ha; déficit: {an['rl_deficit_ha']} ha."
     )

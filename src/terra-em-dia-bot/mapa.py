@@ -77,9 +77,16 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
 
     img = None
     try:
-        w = 1000
         aspect = (ymax - ymin) / (xmax - xmin) if (xmax - xmin) > 0 else 1.0
-        h = max(200, min(1500, int(w * aspect)))
+        MAXDIM = 1400
+        if aspect >= 1:
+            h = MAXDIM
+            w = int(MAXDIM / aspect)
+        else:
+            w = MAXDIM
+            h = int(MAXDIM * aspect)
+        w = max(200, w)
+        h = max(200, h)
         
         params = {
             "bbox": f"{xmin},{ymin},{xmax},{ymax}",
@@ -168,9 +175,16 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
     # 2. Tenta baixar a imagem de satélite para o bbox de zoom
     img = None
     try:
-        w = 1000
         aspect = (ymax - ymin) / (xmax - xmin) if (xmax - xmin) > 0 else 1.0
-        h = max(200, min(1500, int(w * aspect)))
+        MAXDIM = 1400
+        if aspect >= 1:
+            h = MAXDIM
+            w = int(MAXDIM / aspect)
+        else:
+            w = MAXDIM
+            h = int(MAXDIM * aspect)
+        w = max(200, w)
+        h = max(200, h)
         
         params = {
             "bbox": f"{xmin},{ymin},{xmax},{ymax}",

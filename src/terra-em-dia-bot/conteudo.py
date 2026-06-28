@@ -51,11 +51,28 @@ def resumo_imovel(an: dict) -> str:
     
     # 1. Mata Ciliar (APP)
     if an.get("tem_app"):
-        partes.append(
-            f"Na *beira do rio*, a lei pede para manter o mato numa faixa de *{an['faixa_app_m']} metros* de cada lado. "
-            f"No seu sítio, essa faixa dá cerca de *{_n(an['app_mata_ciliar_ha'])} ha*. No mapa dá para ver onde ela fica — "
-            "aí vale a pena olhar lá na terra quanto já está coberto de mato e quanto falta."
-        )
+        if "app_largura_m" in an:
+            largura = an["app_largura_m"]
+            falta_m = an["app_falta_m"]
+            if largura >= 30:
+                msg_app = (
+                    f"Na *beira do rio*, a lei pede uma faixa de *30 metros* de cada lado (medida da margem). "
+                    f"A sua faixa declarada tem em média *{_n(largura)} metros*, então ela já está dentro do que a lei pede! "
+                    "Parabéns por cuidar da água da propriedade."
+                )
+            else:
+                msg_app = (
+                    f"Na *beira do rio*, a lei pede uma faixa de *30 metros* de cada lado (medidos da margem). "
+                    f"A sua faixa declarada tem em média *{_n(largura)} metros* — então faltam cerca de *{_n(falta_m)} metros* "
+                    "para chegar aos 30 metros de proteção. Esses valores são calculados de forma aproximada; o ajuste fino é feito no SICAR."
+                )
+        else:
+            msg_app = (
+                f"Na *beira do rio*, a lei pede para manter o mato numa faixa de *{an['faixa_app_m']} metros* de cada lado. "
+                f"No seu sítio, essa faixa dá cerca de *{_n(an['app_mata_ciliar_ha'])} ha*. No mapa dá para ver onde ela fica — "
+                "aí vale a pena olhar lá na terra quanto já está coberto de mato e quanto falta."
+            )
+        partes.append(msg_app)
     else:
         partes.append(
             f"Na *beira do rio*, a regra geral para rios de até 10 metros de largura pede uma faixa de *{an['faixa_app_m']} metros* de mato de cada lado para proteger a água. "
@@ -87,13 +104,32 @@ def resumo_imovel(an: dict) -> str:
 
 def explica_mata(an: dict) -> str:
     if an.get("tem_app"):
-        return (
-            "A *mata ciliar* é aquela vegetação que fica na beira do rio, funcionando "
-            "como os cílios dos nossos olhos para proteger a água.\n"
-            f"A lei pede para manter o mato numa faixa de *{an['faixa_app_m']} metros* de cada lado do rio. "
-            f"No seu sítio, essa faixa dá cerca de *{_n(an['app_mata_ciliar_ha'])} ha*. No mapa dá para ver onde ela fica — "
-            "aí vale a pena olhar lá na terra quanto já está coberto de mato e quanto falta."
-        )
+        if "app_largura_m" in an:
+            largura = an["app_largura_m"]
+            falta_m = an["app_falta_m"]
+            if largura >= 30:
+                return (
+                    "A *mata ciliar* é aquela vegetação que fica na beira do rio, funcionando "
+                    "como os cílios dos nossos olhos para proteger a água.\n"
+                    f"A lei pede para manter o mato numa faixa de *30 metros* de cada lado (medidos da margem). "
+                    f"A sua faixa declarada tem em média *{_n(largura)} metros*, cumprindo toda a regra."
+                )
+            else:
+                return (
+                    "A *mata ciliar* é aquela vegetação que fica na beira do rio, funcionando "
+                    "como os cílios dos nossos olhos para proteger a água.\n"
+                    f"A lei pede uma faixa de *30 metros* de cada lado do rio. "
+                    f"A sua faixa declarada tem em média *{_n(largura)} metros* — então faltam cerca de *{_n(falta_m)} metros* para chegar no exigido.\n"
+                    "Esses valores de largura são aproximados; no SICAR você confirma o ajuste definitivo."
+                )
+        else:
+            return (
+                "A *mata ciliar* é aquela vegetação que fica na beira do rio, funcionando "
+                "como os cílios dos nossos olhos para proteger a água.\n"
+                f"A lei pede para manter o mato numa faixa de *{an['faixa_app_m']} metros* de cada lado do rio. "
+                f"No seu sítio, essa faixa dá cerca de *{_n(an['app_mata_ciliar_ha'])} ha*. No mapa dá para ver onde ela fica — "
+                "aí vale a pena olhar lá na terra quanto já está coberto de mato e quanto falta."
+            )
     return (
         "A *mata ciliar* é aquela vegetação que fica na beira do rio, funcionando "
         "como os cílios dos nossos olhos para proteger a água.\n"
