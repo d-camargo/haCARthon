@@ -2105,3 +2105,119 @@ PY
 - Ajustado o título do painel da solução para `"Em dia: faixa de 30m coberta 🌳"`.
 - Registrada a alteração visual no `README.md`.
 
+---
+
+## ACTION-018 — Projeção Métrica Global nos Mapas (UTM SIRGAS 2000)
+
+status: concluida
+tipo: codigo
+prioridade: media
+
+### Objetivo
+
+O usuário solicitou que todas as renderizações de mapas e as feições geográficas sejam operadas estritamente em **projeção métrica** (ex: UTM SIRGAS 2000), garantindo que satélite e vetores compartilhem exatamente o mesmo SRC no Matplotlib, abandonando o uso de latitude/longitude (EPSG:4674) diretamente no `imshow` e nos vetores desenhados.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+- `src/terra-em-dia-bot/geo_app.py`
+- `src/terra-em-dia-bot/README.md`
+
+### Arquivos proibidos
+
+- `.env` e afins · `data/**` · `desafio-2/**` · `.sqlite` · `.pdf`
+- `bot.py` · `conteudo.py` · `cadastro.py` · `analise.py` · `llm.py` (só importar)
+
+### Passos
+
+1. Em `geo_app.py`, refatore a lógica de reprojeção para expor uma função auxiliar `reprojetar_poligonos_utm(polys, epsg_utm)` para reaproveitamento. Lembre-se de calcular o fuso (`zona`) a partir do primeiro vértice para achar o `epsg_utm` (ex: 31982).
+2. Em `mapa.py` (nas funções `gerar_mapa` e `gerar_comparativo`), logo no início, descubra o EPSG UTM correto para o imóvel e **reprojete todos os polígonos** (`perimetro`, `app` e `rl`) para UTM antes de calcular o bounding box (`xmin, xmax, ymin, ymax`).
+3. Ao construir a URL da imagem de satélite no ArcGIS/Esri, mude os parâmetros `bboxSR` e `imageSR` para o código EPSG UTM que você calculou (ex: `"31982"`).
+4. Como tudo agora estará em metros no mesmo fuso UTM, a API do Esri devolverá o JSON com o `extent` já em UTM. Você passará esse `extent` em metros para o `ax.imshow`.
+5. Remova a linha `ax.set_aspect(1 / cos(radians(...)))` (introduzida na ACTION-013), substituindo simplesmente por `ax.set_aspect("equal")` ou `ax.set_aspect(1)`, já que em projeção métrica as proporções X e Y são 1:1.
+6. Atualize o `README.md` relatando que o motor de mapas foi migrado 100% para UTM.
+7. Valide se os testes continuam passando e os mapas são gerados sem quebrar. **Commit e push** (travas da ACTION-008). Mensagem: `Bot: projecao metrica global (UTM) para todos os mapas e satelite`.
+
+### Comandos de validação
+
+```bash
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import cadastro, mapa, os
+cods=[l.strip() for l in open("data/imoveis_teste.local.txt") if l.strip() and not l.startswith("#")]
+imv=cadastro.carregar_imovel(cods[0])
+out=mapa.gerar_mapa(imv, "/tmp/mapa_utm.png")
+assert out and os.path.getsize(out)>0
+print("OK mapa UTM gerado")
+PY
+```
+
+### Critérios de aceite
+
+- Nenhuma feição desenhada pela `_desenha` utiliza mais graus (EPSG:4674), mas sim metros no fuso local.
+- A requisição ao ArcGIS respeita o novo `bboxSR` e `imageSR`.
+
+### Resultado do executor
+
+- Refatorada a classe `geo_app.py` para extrair e exportar as funções `obter_epsg_utm_imovel` (calculando o fuso UTM a partir da longitude do imóvel) e `reprojetar_poligonos_utm` (utilizando GDAL/OSR com mapeamento tradicional de eixos GIS).
+- Integrada a reprojeção UTM nas funções `gerar_mapa` e `gerar_comparativo` em `mapa.py`, de modo que todas as feições (perímetro, APP e RL) e o bounding box do mapa sejam computados e desenhados inteiramente em coordenadas métricas (metros).
+- Ajustados os parâmetros da API de exportação de satélite do ArcGIS/Esri (`bboxSR` e `imageSR`) para o respectivo EPSG UTM calculado, fazendo com que a API retorne a imagem e o `extent` em metros, perfeitamente alinhados aos vetores.
+- Removido o fator `cos(lat)` de compensação de aspect ratio anterior e configurado `ax.set_aspect("equal")` já que a projeção é métrica e possui razão 1:1.
+
+---
+
+## ACTION-019 — Plotar Hidrografia Externa como Referência Visual (IAT/ANA)
+
+status: concluida
+tipo: codigo
+prioridade: media
+
+### Objetivo
+
+Adicionar a geometria de hidrografia proveniente de bases públicas (ex: IAT/GeoPR ou ANA/IBGE) para ser plotada como uma linha de referência visual no mapa, a pedido do usuário. Isso ajudará a enxergar o leito do rio que dá origem à exigência da mata ciliar.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+- `src/terra-em-dia-bot/README.md`
+
+### Arquivos proibidos
+
+- `.env` e afins · `data/**` · `desafio-2/**` · `.sqlite` · `.pdf`
+- `bot.py` · `conteudo.py` · `cadastro.py` · `analise.py` · `llm.py` (só importar)
+
+### Passos
+
+1. Em `mapa.py`, crie uma função auxiliar que receba um `bbox` (coordenadas mínimas e máximas) e consulte uma API WFS ou REST oficial de hidrografia. (Recomendado: tentar os serviços REST abertos da ANA ou do GeoPR mapeados no Spike).
+2. Peça à API apenas as feições que interceptem o bounding box do mapa.
+3. Se a API retornar sucesso, extraia a geometria das linhas (LineString) da calha/drenagem e, **muito importante**, aplique a reprojeção UTM (criada na ACTION-018) para que ela se alinhe ao novo mapa.
+4. Desenhe essas linhas no `ax` (ex: `ax.plot(x, y, color="#0ea5e9", linewidth=2.5, zorder=3, label="Rio / Drenagem (Ref)")`).
+5. Não altere o texto da conversa nem a análise de áreas, use a hidrografia **apenas como camada visual (reference layer)**.
+6. Valide se a API foi integrada de forma defensiva (se der erro de timeout ou HTTP 500, o mapa deve ignorar o erro e continuar sendo gerado sem o rio, mas não pode falhar).
+7. Valide gerando um mapa. Em seguida, **commit e push** (travas ACTION-008). Mensagem: `Bot: camada visual de rio via servico externo de hidrografia`.
+
+### Comandos de validação
+
+```bash
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import cadastro, mapa
+# Testar gerando o mapa para garantir que o plot não falhe
+imv=cadastro.carregar_imovel(open("data/imoveis_teste.local.txt").readline().strip())
+mapa.gerar_mapa(imv, "/tmp/mapa_com_rio.png")
+print("OK mapa com hidrografia testado (verificar log visualmente)")
+PY
+```
+
+### Critérios de aceite
+
+- O mapa contém o leito do rio originado por fontes de dados públicas externas plotado em azul, quando o serviço de dados está disponível e a hidrografia mapeada.
+- A aplicação é resiliente a quedas da API externa de mapas.
+- As linhas do rio acompanham corretamente o sistema de coordenadas UTM do mapa.
+
+### Resultado do executor
+
+- Criada a função interna `_obter_hidrografia_externa` em `mapa.py` que efetua uma consulta espacial defensiva via protocolo HTTPS utilizando bypass de SSL (devido ao certificado do GeoPR/IAT) ao endpoint REST do ArcGIS do estado do Paraná (serviço de zoneamento de cursos d'água `zee_rios` da pasta `00_PUBLICACOES` federado em `/server/rest/services`).
+- A consulta é filtrada pelo envelope do bbox da propriedade com entradas e saídas configuradas na respectiva projeção `epsg_utm` (metros).
+- As geometrias retornadas (LineStrings) são desenhadas em azul (`#0ea5e9`) com espessura `2.5` e incluídas de forma condicional nas legendas como `"Rio / Drenagem (Ref)"`.
+- O método é 100% resiliente: falhas de timeout, SSL ou quedas de conexão são tratadas e silenciosamente ignoradas para que o mapa prossiga com fundo de satélite offline se necessário.
+
+

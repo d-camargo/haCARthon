@@ -14,6 +14,7 @@ import urllib.request
 import urllib.parse
 import io
 from PIL import Image
+from matplotlib.lines import Line2D
 
 import matplotlib
 
@@ -52,15 +53,78 @@ def _bounds(polys, b):
     return b
 
 
+def _obter_hidrografia_externa(xmin: float, ymin: float, xmax: float, ymax: float, epsg_utm: int) -> list:
+    """Consulta a API REST do GeoPR (IAT) para obter linhas de hidrografia no bbox, em UTM."""
+    import urllib.request
+    import urllib.parse
+    import json
+    import ssl
+    
+    linhas = []
+    try:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+
+        params = {
+            "geometry": f"{xmin},{ymin},{xmax},{ymax}",
+            "geometryType": "esriGeometryEnvelope",
+            "inSR": str(epsg_utm),
+            "spatialRel": "esriSpatialRelIntersects",
+            "outSR": str(epsg_utm),
+            "f": "json",
+            "returnGeometry": "true",
+            "outFields": "rio"
+        }
+        url = "https://geopr.iat.pr.gov.br/server/rest/services/00_PUBLICACOES/zee_rios/MapServer/0/query?" + urllib.parse.urlencode(params)
+        
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        )
+        with urllib.request.urlopen(req, timeout=8, context=ctx) as resp:
+            res = json.loads(resp.read().decode("utf-8"))
+            for feat in res.get("features", []):
+                geom = feat.get("geometry", {})
+                for path in geom.get("paths", []):
+                    pts = [(pt[0], pt[1]) for pt in path]
+                    if pts:
+                        linhas.append(pts)
+    except Exception:
+        # Silencioso e defensivo
+        pass
+    return linhas
+
+
 def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
     saida = Path(saida)
     meta = modo == "meta"
     fig, ax = plt.subplots(figsize=(8, 8), dpi=130)
 
-    # 1. Calcula os limites (bbox) com margem
+    import geo_app
+    epsg_utm = geo_app.obter_epsg_utm_imovel(imovel)
+
+    # Reprojeta as camadas locais para UTM
+    perimetro_utm = geo_app.reprojetar_poligonos_utm(imovel["perimetro"], epsg_utm)
+    app_utm = []
+    for f in imovel["app"]:
+        app_utm.append({
+            "tipo": f["tipo"],
+            "polys": geo_app.reprojetar_poligonos_utm(f["polys"], epsg_utm),
+            "area_ha": f.get("area_ha")
+        })
+    rl_utm = []
+    for f in imovel["rl"]:
+        rl_utm.append({
+            "tipo": f["tipo"],
+            "polys": geo_app.reprojetar_poligonos_utm(f["polys"], epsg_utm),
+            "area_ha": f.get("area_ha")
+        })
+
+    # 1. Calcula os limites (bbox) com margem em metros
     b = [9e9, 9e9, -9e9, -9e9]
-    _bounds(imovel["perimetro"], b)
-    for f in imovel["app"] + imovel["rl"]:
+    _bounds(perimetro_utm, b)
+    for f in app_utm + rl_utm:
         _bounds(f["polys"], b)
     mx = (b[2] - b[0]) * 0.08 + 1e-4
     my = (b[3] - b[1]) * 0.08 + 1e-4
@@ -91,8 +155,8 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
         import json
         params = {
             "bbox": f"{xmin},{ymin},{xmax},{ymax}",
-            "bboxSR": "4326",
-            "imageSR": "4326",
+            "bboxSR": str(epsg_utm),
+            "imageSR": str(epsg_utm),
             "size": f"{w},{h}",
             "format": "jpg",
             "f": "json"
@@ -125,17 +189,26 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
         ax.imshow(img, extent=[extent_real["xmin"], extent_real["xmax"], extent_real["ymin"], extent_real["ymax"]], origin="upper", zorder=0)
 
     # 3. Desenha as feições
-    _desenha(ax, imovel["perimetro"], ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
+    _desenha(ax, perimetro_utm, ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
     app_est = ESTILO["app_meta"] if meta else ESTILO["app"]
-    for f in imovel["app"]:
+    for f in app_utm:
         _desenha(ax, f["polys"], app_est, zorder=2, satelite=satelite_ok)
     if not meta:  # no mapa-meta, foco na mata ciliar
-        for f in imovel["rl"]:
+        for f in rl_utm:
             _desenha(ax, f["polys"], ESTILO["rl"], zorder=2, satelite=satelite_ok)
+
+    # 4. Desenha a hidrografia externa (se houver)
+    linhas_rio = _obter_hidrografia_externa(xmin, ymin, xmax, ymax, epsg_utm)
+    desenhou_rio = False
+    for path in linhas_rio:
+        xs = [pt[0] for pt in path]
+        ys = [pt[1] for pt in path]
+        ax.plot(xs, ys, color="#0ea5e9", linewidth=2.5, zorder=3)
+        desenhou_rio = True
 
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
-    ax.set_aspect(1 / cos(radians((ymin + ymax) / 2)))
+    ax.set_aspect("equal")
 
     handles = [plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["perimetro"]["face"],
                              edgecolor=ESTILO["perimetro"]["edge"], alpha=0.7,
@@ -146,6 +219,9 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
     if imovel["rl"] and not meta:
         handles.append(plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["rl"]["face"],
                                      alpha=0.7, label=ESTILO["rl"]["label"]))
+    if desenhou_rio:
+        handles.append(Line2D([0], [0], color="#0ea5e9", linewidth=2.5, label="Rio / Drenagem (Ref)"))
+
     ax.legend(handles=handles, loc="upper right", fontsize=9, framealpha=0.9)
 
     municipio = imovel["attrs"].get("municipio", "")
@@ -167,9 +243,30 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
 def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> Path | None:
     saida = Path(saida)
 
-    # 1. Calcula limites de zoom focados na feição escolhida
+    import geo_app
+    epsg_utm = geo_app.obter_epsg_utm_imovel(imovel)
+
+    # Reprojeta as camadas locais para UTM
+    perimetro_utm = geo_app.reprojetar_poligonos_utm(imovel["perimetro"], epsg_utm)
+    app_utm = []
+    for f in imovel["app"]:
+        app_utm.append({
+            "tipo": f["tipo"],
+            "polys": geo_app.reprojetar_poligonos_utm(f["polys"], epsg_utm),
+            "area_ha": f.get("area_ha")
+        })
+    rl_utm = []
+    for f in imovel["rl"]:
+        rl_utm.append({
+            "tipo": f["tipo"],
+            "polys": geo_app.reprojetar_poligonos_utm(f["polys"], epsg_utm),
+            "area_ha": f.get("area_ha")
+        })
+
+    # 1. Calcula limites de zoom focados na feição escolhida em UTM
     b = [9e9, 9e9, -9e9, -9e9]
-    for f in imovel.get(feicao, []):
+    camada_alvo = app_utm if feicao == "app" else rl_utm
+    for f in camada_alvo:
         _bounds(f["polys"], b)
         
     if b[0] > 8e9:
@@ -201,8 +298,8 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
         import json
         params = {
             "bbox": f"{xmin},{ymin},{xmax},{ymax}",
-            "bboxSR": "4326",
-            "imageSR": "4326",
+            "bboxSR": str(epsg_utm),
+            "imageSR": str(epsg_utm),
             "size": f"{w},{h}",
             "format": "jpg",
             "f": "json"
@@ -243,16 +340,26 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
     # 3. Painel da esquerda: "Hoje" (contorno/chão apenas)
     if satelite_ok:
         ax1.imshow(img, extent=[extent_real["xmin"], extent_real["xmax"], extent_real["ymin"], extent_real["ymax"]], origin="upper", zorder=0)
-    _desenha(ax1, imovel["perimetro"], ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
-    for f in imovel["app"]:
+    _desenha(ax1, perimetro_utm, ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
+    for f in app_utm:
         _desenha(ax1, f["polys"], est_hoje, zorder=2, satelite=satelite_ok)
 
     # 4. Painel da direita: "Como deve ficar (Meta)" (verde sólido)
     if satelite_ok:
         ax2.imshow(img, extent=[extent_real["xmin"], extent_real["xmax"], extent_real["ymin"], extent_real["ymax"]], origin="upper", zorder=0)
-    _desenha(ax2, imovel["perimetro"], ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
-    for f in imovel["app"]:
+    _desenha(ax2, perimetro_utm, ESTILO["perimetro"], zorder=1, satelite=satelite_ok)
+    for f in app_utm:
         _desenha(ax2, f["polys"], est_em_dia, zorder=2, satelite=satelite_ok)
+
+    # 4b. Desenha a hidrografia externa (se houver)
+    linhas_rio = _obter_hidrografia_externa(xmin, ymin, xmax, ymax, epsg_utm)
+    desenhou_rio = False
+    for path in linhas_rio:
+        xs = [pt[0] for pt in path]
+        ys = [pt[1] for pt in path]
+        ax1.plot(xs, ys, color="#0ea5e9", linewidth=2.5, zorder=3)
+        ax2.plot(xs, ys, color="#0ea5e9", linewidth=2.5, zorder=3)
+        desenhou_rio = True
 
     # Adiciona a cota visual de 30m no painel da solução (ax2)
     cx = (xmin + xmax) / 2
@@ -273,7 +380,7 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
     for ax in (ax1, ax2):
         ax.set_xlim(xmin, xmax)
         ax.set_ylim(ymin, ymax)
-        ax.set_aspect(1 / cos(radians((ymin + ymax) / 2)))
+        ax.set_aspect("equal")
         ax.set_xticks([])
         ax.set_yticks([])
         for s in ax.spines.values():
@@ -289,6 +396,8 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
     if imovel["app"]:
         h1.append(plt.Rectangle((0, 0), 1, 1, facecolor="none", edgecolor=est_hoje["edge"],
                                 linewidth=2.0, label="Área que precisa de mata ciliar"))
+    if desenhou_rio:
+        h1.append(Line2D([0], [0], color="#0ea5e9", linewidth=2.5, label="Rio / Drenagem (Ref)"))
     ax1.legend(handles=h1, loc="upper right", fontsize=8, framealpha=0.9)
 
     h2 = [plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["perimetro"]["face"],
@@ -297,6 +406,8 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
     if imovel["app"]:
         h2.append(plt.Rectangle((0, 0), 1, 1, facecolor=est_em_dia["face"],
                                 alpha=0.8, label=est_em_dia["label"]))
+    if desenhou_rio:
+        h2.append(Line2D([0], [0], color="#0ea5e9", linewidth=2.5, label="Rio / Drenagem (Ref)"))
     ax2.legend(handles=h2, loc="upper right", fontsize=8, framealpha=0.9)
 
     municipio = imovel["attrs"].get("municipio", "")

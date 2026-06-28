@@ -1,6 +1,53 @@
 import math
 from osgeo import osr
 
+def obter_epsg_utm_de_ponto(lon: float) -> int:
+    zona = int((lon + 180) / 6) + 1
+    return 31960 + zona
+
+def obter_epsg_utm_imovel(imovel: dict) -> int:
+    try:
+        lon = imovel["perimetro"][0][0][0][0]
+        return obter_epsg_utm_de_ponto(lon)
+    except (IndexError, KeyError, TypeError):
+        pass
+    for camada in ("app", "rl"):
+        for f in imovel.get(camada, []):
+            try:
+                lon = f["polys"][0][0][0][0]
+                return obter_epsg_utm_de_ponto(lon)
+            except (IndexError, KeyError, TypeError):
+                pass
+    return 31982
+
+def reprojetar_poligonos_utm(polys, epsg_utm: int) -> list:
+    src = osr.SpatialReference()
+    src.ImportFromEPSG(4674)
+    src.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+    
+    dst = osr.SpatialReference()
+    dst.ImportFromEPSG(epsg_utm)
+    dst.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+    
+    transform = osr.CoordinateTransformation(src, dst)
+    
+    new_polys = []
+    for ext, furos in polys:
+        ext_utm = []
+        for x, y in ext:
+            px, py, _ = transform.TransformPoint(x, y)
+            ext_utm.append((px, py))
+            
+        furos_utm = []
+        for f in furos:
+            f_utm = []
+            for x, y in f:
+                px, py, _ = transform.TransformPoint(x, y)
+                f_utm.append((px, py))
+            furos_utm.append(f_utm)
+        new_polys.append((ext_utm, furos_utm))
+    return new_polys
+
 def medir_app(imovel: dict) -> dict | None:
     # 1. Encontra a camada app_rio_ate_10
     app_camada = None
@@ -13,45 +60,13 @@ def medir_app(imovel: dict) -> dict | None:
         return None
 
     polys = app_camada["polys"]
-    
-    # 2. Pega a longitude de referência do 1º ponto para calcular a zona UTM
-    try:
-        lon_ref = polys[0][0][0][0]
-    except (IndexError, TypeError):
-        return None
-
-    zona = int((lon_ref + 180) / 6) + 1
-    epsg_utm = 31960 + zona
-
-    src = osr.SpatialReference()
-    src.ImportFromEPSG(4674)
-    src.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
-    
-    dst = osr.SpatialReference()
-    dst.ImportFromEPSG(epsg_utm)
-    dst.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
-    
-    transform = osr.CoordinateTransformation(src, dst)
+    epsg_utm = obter_epsg_utm_imovel(imovel)
+    polys_utm = reprojetar_poligonos_utm(polys, epsg_utm)
 
     total_area_m2 = 0.0
     total_perimetro_m = 0.0
 
-    for ext, furos in polys:
-        # Reprojeta anel externo
-        ext_utm = []
-        for x, y in ext:
-            px, py, _ = transform.TransformPoint(x, y)
-            ext_utm.append((px, py))
-            
-        # Reprojeta furos
-        furos_utm = []
-        for f in furos:
-            f_utm = []
-            for x, y in f:
-                px, py, _ = transform.TransformPoint(x, y)
-                f_utm.append((px, py))
-            furos_utm.append(f_utm)
-
+    for ext_utm, furos_utm in polys_utm:
         # Calcula área do anel externo
         n_ext = len(ext_utm)
         if n_ext >= 3:
