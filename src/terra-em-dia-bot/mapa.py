@@ -34,6 +34,24 @@ ESTILO = {
 }
 
 
+def _desenhar_seta_norte(fig, theta, caixa):
+    """Desenha a rosa dos ventos girada em um eixo próprio reservado.
+
+    `caixa` = [left, bottom, width, height] em fração da figura, toda dentro
+    de [0,1] e com folga das bordas, então a seta nunca é recortada.
+    """
+    try:
+        caminho_seta = Path(__file__).parent / "assets" / "seta_norte.png"
+        img_seta = Image.open(caminho_seta)
+        img_girada = img_seta.rotate(theta, expand=True)
+        cax = fig.add_axes(caixa, zorder=5)
+        cax.imshow(img_girada)
+        cax.set_aspect("equal")
+        cax.set_axis_off()
+    except Exception:
+        pass
+
+
 def _desenha(ax, polys, est, zorder=1, satelite=False, transform=None):
     for ext, _furos in polys:
         if len(ext) >= 3:
@@ -363,18 +381,6 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
     ax.set_ylim(ymin_rot, ymax_rot)
     ax.set_aspect("equal")
 
-    # Seta do Norte com Rosa dos Ventos de imagem asset (ACTION-030)
-    from matplotlib.offsetbox import OffsetImage, AnnotationBbox
-    try:
-        caminho_seta = Path(__file__).parent / "assets" / "seta_norte.png"
-        img_seta = Image.open(caminho_seta)
-        img_girada = img_seta.rotate(theta, expand=True)
-        imagebox = OffsetImage(img_girada, zoom=0.15)
-        ab = AnnotationBbox(imagebox, (0.92, 0.85), xycoords='figure fraction', frameon=False, zorder=5)
-        ax.add_artist(ab)
-    except Exception:
-        pass
-
     res_app = geo_app.medir_app(imovel)
     if res_app:
         ha_decl = res_app.get("app_area_decl_ha", 0.0)
@@ -412,6 +418,7 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
 
     fig.tight_layout()
     fig.subplots_adjust(bottom=0.15, right=0.85)
+    _desenhar_seta_norte(fig, theta, [0.86, 0.80, 0.12, 0.12])
     fig.savefig(saida, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return saida
@@ -601,19 +608,6 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
         for s in ax.spines.values():
             s.set_visible(False)
 
-    # Seta do Norte única colocada na parte branca superior (ACTION-032)
-    from matplotlib.offsetbox import OffsetImage, AnnotationBbox
-    try:
-        caminho_seta = Path(__file__).parent / "assets" / "seta_norte.png"
-        img_seta = Image.open(caminho_seta)
-        img_girada = img_seta.rotate(theta, expand=True)
-        imagebox = OffsetImage(img_girada, zoom=0.15)
-        # (0.5, 0.88) coloca exatamente no meio da parte branca superior entre os dois eixos
-        ab = AnnotationBbox(imagebox, (0.5, 0.88), xycoords='figure fraction', frameon=False, zorder=5)
-        ax1.add_artist(ab)
-    except Exception:
-        pass
-
     ax1.set_title("Hoje: a beira do rio", fontsize=12, weight="bold")
     ax2.set_title("Em dia: faixa de 30m coberta 🌳", fontsize=12, weight="bold")
 
@@ -677,6 +671,7 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
 
     fig.tight_layout()
     fig.subplots_adjust(bottom=0.25)
+    _desenhar_seta_norte(fig, theta, [0.90, 0.86, 0.08, 0.10])
     fig.savefig(saida, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return saida

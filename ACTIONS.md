@@ -2910,3 +2910,161 @@ PY
 - Em `gerar_comparativo`: removido o bloco da bússola de dentro do loop dos subplots. Adicionada uma única bússola posicionada no centro superior usando `xycoords='figure fraction'` na posição `(0.5, 0.88)` e ancorada ao eixo `ax1`.
 - Em `gerar_mapa`: ajustado o posicionamento da bússola para usar `xycoords='figure fraction'` e configurado o espaçamento da figura para criar uma margem branca lateral com `right=0.85` em `fig.subplots_adjust`.
 - Validada com sucesso a exportação sem qualquer overlap com o mapa ou satélite.
+
+---
+
+## ACTION-033 — Seta do Norte em eixo próprio reservado (parar de cortar a seta)
+
+status: concluida
+tipo: codigo
+prioridade: alta
+
+### Objetivo
+
+A seta do norte está sendo cortada (sai pela borda da figura). Trocar o
+posicionamento frágil por um **eixo dedicado** (`fig.add_axes`) totalmente dentro
+da figura, para que a seta **nunca** possa ser recortada, em qualquer ângulo.
+
+### Contexto
+
+Hoje a seta é inserida como `AnnotationBbox` em `xycoords='figure fraction'`
+perto da borda — `(0.92, 0.85)` em `gerar_mapa` e `(0.5, 0.88)` em
+`gerar_comparativo`. Isso quebra por dois motivos somados:
+
+1. `Image.rotate(theta, expand=True)` faz a caixa da imagem **mudar de tamanho
+   conforme o ângulo**; em ângulos diagonais ela cresce e, ancorada perto da
+   borda, ultrapassa o limite da figura (passa de `1.0`).
+2. `fig.savefig(..., bbox_inches="tight")` recorta pela borda do conteúdo, e
+   artista offset-image ancorado em *figure fraction* na borda **não entra de
+   forma confiável** nesse recorte. Resultado: a seta é cortada.
+
+A rotação em si está correta: o mapa gira com `rotate_deg(theta)` e o PNG aponta
+para cima por padrão, então `rotate(theta, expand=True)` alinha a seta com o
+norte do mapa. **NÃO altere o sinal nem o valor da rotação.**
+
+A solução é dar à seta um **eixo próprio** (`fig.add_axes([l, b, w, h])`) com
+coordenadas inteiramente dentro de `[0,1]` e com folga das bordas. A imagem é
+desenhada com `imshow` **dentro desse eixo**, então ela fica contida no eixo e
+não tem como ultrapassar a figura. Esse eixo deve ser criado **depois** do
+`fig.subplots_adjust(...)` e **antes** do `fig.savefig(...)`, para o
+`tight_layout` não reposicioná-lo.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+
+### Arquivos proibidos
+
+- `src/terra-em-dia-bot/.env`
+- `.env`, `.env.*` (exceto `.env.example`)
+- `data/**`
+- `desafio-2/**`
+- `docs/base-documental/**`
+- `src/terra-em-dia-bot/assets/**` (não recriar/editar o PNG, só usar)
+- qualquer outro `.py` além de `mapa.py`
+
+### Passos
+
+1. Crie um helper único no topo de `mapa.py` (logo após os imports), para não
+   duplicar lógica entre as duas funções:
+
+   ```python
+   def _desenhar_seta_norte(fig, theta, caixa):
+       """Desenha a rosa dos ventos girada em um eixo próprio reservado.
+
+       `caixa` = [left, bottom, width, height] em fração da figura, toda dentro
+       de [0,1] e com folga das bordas, então a seta nunca é recortada.
+       """
+       from matplotlib.offsetbox import OffsetImage  # noqa: F401  (não usado, manter imports limpos)
+       try:
+           caminho_seta = Path(__file__).parent / "assets" / "seta_norte.png"
+           img_seta = Image.open(caminho_seta)
+           img_girada = img_seta.rotate(theta, expand=True)
+           cax = fig.add_axes(caixa, zorder=5)
+           cax.imshow(img_girada)
+           cax.set_aspect("equal")
+           cax.set_axis_off()
+       except Exception:
+           pass
+   ```
+
+   Observação: pode remover a linha do import de `OffsetImage` se preferir; ele
+   não é mais necessário no helper. Só não deixe import quebrado.
+
+2. Em `gerar_mapa`: **remova** o bloco atual da seta (o `try/except` com
+   `OffsetImage`, `AnnotationBbox` e `ax.add_artist(ab)` em
+   `xycoords='figure fraction'`, hoje logo após `ax.set_aspect("equal")`).
+
+3. Em `gerar_mapa`: **depois** da linha
+   `fig.subplots_adjust(bottom=0.15, right=0.85)` e **antes** de
+   `fig.savefig(...)`, chame:
+
+   ```python
+   _desenhar_seta_norte(fig, theta, [0.86, 0.80, 0.12, 0.12])
+   ```
+
+   (a margem direita já é reservada por `right=0.85`; a caixa termina em
+   `0.86+0.12=0.98` e `0.80+0.12=0.92`, dentro da figura).
+
+4. Em `gerar_comparativo`: **remova** o bloco atual da seta (o `try/except` com
+   `OffsetImage`/`AnnotationBbox` em `(0.5, 0.88)` ancorado em `ax1`).
+
+5. Em `gerar_comparativo`: **depois** da linha
+   `fig.subplots_adjust(bottom=0.25)` e **antes** de `fig.savefig(...)`, chame:
+
+   ```python
+   _desenhar_seta_norte(fig, theta, [0.90, 0.86, 0.08, 0.10])
+   ```
+
+   (canto superior direito da folha, longe do `suptitle` central; termina em
+   `0.98` e `0.96`, dentro da figura).
+
+6. Não mude rotação, `theta`, estilos, legendas, quadro de áreas, nem o
+   download de satélite. Escopo é só onde a seta é desenhada.
+
+### Comandos de validação
+
+```bash
+python -m py_compile src/terra-em-dia-bot/*.py
+```
+
+```bash
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import mapa, cadastro
+cod = open("data/imoveis_teste.local.txt").readline().strip()
+imv = cadastro.carregar_imovel(cod)
+mapa.gerar_mapa(imv, "/tmp/seta_unico.png")
+mapa.gerar_mapa(imv, "/tmp/seta_unico_meta.png", modo="meta")
+mapa.gerar_comparativo(imv, "/tmp/seta_cmp.png")
+print("OK. Abrir as 3 imagens e conferir que a seta aparece INTEIRA, fora do mapa, sem corte na borda.")
+PY
+```
+
+### Critérios de aceite
+
+- `py_compile` passa.
+- Nas 3 imagens, a rosa dos ventos aparece **completa**, sem corte na borda.
+- A seta fica **fora** da imagem de satélite/polígono (na área branca).
+- A seta continua apontando para o norte (PNG aponta pra cima; gira com `theta`).
+- Nenhuma outra função/estilo foi alterado.
+
+### Forma errada provável
+
+- Não voltar a usar `xycoords='figure fraction'` com `AnnotationBbox` na borda.
+- Não usar caixa que encoste/ultrapasse `1.0` (ex.: `left=0.95` com `width=0.10`).
+- Não chamar `_desenhar_seta_norte` antes do `subplots_adjust` (o tight_layout
+  pode reposicionar o eixo).
+- Não mexer no PNG do asset nem no ângulo de rotação.
+
+### Resultado do executor
+
+- Criado o helper `_desenhar_seta_norte(fig, theta, caixa)` no topo de `mapa.py`.
+- Removidos os dois blocos antigos de `AnnotationBbox`/`xycoords='figure fraction'`
+  (de `gerar_mapa` e `gerar_comparativo`).
+- Seta chamada após `subplots_adjust`: `gerar_mapa` em `[0.86, 0.80, 0.12, 0.12]`;
+  `gerar_comparativo` em `[0.90, 0.86, 0.08, 0.10]`.
+- Validado: `py_compile` OK e as 3 imagens (`/tmp/seta_unico.png`,
+  `/tmp/seta_unico_meta.png`, `/tmp/seta_cmp.png`) mostram a seta **inteira**,
+  fora do mapa, sem corte, apontando pro norte. Verificação visual feita pelo
+  senior (o junior parou antes de fechar o registro).
+- Pendente: commit (aguardando ok do usuário).
