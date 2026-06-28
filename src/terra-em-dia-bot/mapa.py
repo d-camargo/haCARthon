@@ -363,30 +363,17 @@ def gerar_mapa(imovel: dict, saida: str | Path, modo: str = "atual") -> Path:
     ax.set_ylim(ymin_rot, ymax_rot)
     ax.set_aspect("equal")
 
-    # Seta do Norte dinâmica em coordenadas de tela com alto contraste (ACTION-029)
-    arrow_x, arrow_y = 0.90, 0.85
-    rad_north = math.radians(theta)
-    dx = -0.06 * math.sin(rad_north)
-    dy = 0.06 * math.cos(rad_north)
-    ax.annotate(
-        "",
-        xy=(arrow_x + dx, arrow_y + dy),
-        xytext=(arrow_x, arrow_y),
-        textcoords="axes fraction",
-        xycoords="axes fraction",
-        arrowprops=dict(facecolor="white", edgecolor="black", width=3, headwidth=10, shrink=0),
-        zorder=5
-    )
-    ax.text(
-        arrow_x + 1.3 * dx,
-        arrow_y + 1.3 * dy,
-        "N",
-        transform=ax.transAxes,
-        ha="center", va="center",
-        fontsize=12, weight="bold", color="white",
-        bbox=dict(facecolor="black", edgecolor="none", alpha=0.5, pad=2),
-        zorder=5
-    )
+    # Seta do Norte com Rosa dos Ventos de imagem asset (ACTION-030)
+    from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+    try:
+        caminho_seta = Path(__file__).parent / "assets" / "seta_norte.png"
+        img_seta = Image.open(caminho_seta)
+        img_girada = img_seta.rotate(theta, expand=True)
+        imagebox = OffsetImage(img_girada, zoom=0.15)
+        ab = AnnotationBbox(imagebox, (0.92, 0.85), xycoords='axes fraction', frameon=False, zorder=5)
+        ax.add_artist(ab)
+    except Exception:
+        pass
 
     res_app = geo_app.medir_app(imovel)
     if res_app:
@@ -614,30 +601,17 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
         for s in ax.spines.values():
             s.set_visible(False)
 
-        # Seta do Norte dinâmica em coordenadas de tela com alto contraste (ACTION-029)
-        arrow_x, arrow_y = 0.90, 0.85
-        rad_north = math.radians(theta)
-        dx = -0.06 * math.sin(rad_north)
-        dy = 0.06 * math.cos(rad_north)
-        ax.annotate(
-            "",
-            xy=(arrow_x + dx, arrow_y + dy),
-            xytext=(arrow_x, arrow_y),
-            textcoords="axes fraction",
-            xycoords="axes fraction",
-            arrowprops=dict(facecolor="white", edgecolor="black", width=3, headwidth=10, shrink=0),
-            zorder=5
-        )
-        ax.text(
-            arrow_x + 1.3 * dx,
-            arrow_y + 1.3 * dy,
-            "N",
-            transform=ax.transAxes,
-            ha="center", va="center",
-            fontsize=12, weight="bold", color="white",
-            bbox=dict(facecolor="black", edgecolor="none", alpha=0.5, pad=2),
-            zorder=5
-        )
+        # Seta do Norte com Rosa dos Ventos de imagem asset (ACTION-030)
+        from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+        try:
+            caminho_seta = Path(__file__).parent / "assets" / "seta_norte.png"
+            img_seta = Image.open(caminho_seta)
+            img_girada = img_seta.rotate(theta, expand=True)
+            imagebox = OffsetImage(img_girada, zoom=0.15)
+            ab = AnnotationBbox(imagebox, (0.92, 0.85), xycoords='axes fraction', frameon=False, zorder=5)
+            ax.add_artist(ab)
+        except Exception:
+            pass
 
     ax1.set_title("Hoje: a beira do rio", fontsize=12, weight="bold")
     ax2.set_title("Em dia: faixa de 30m coberta 🌳", fontsize=12, weight="bold")
@@ -659,7 +633,7 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
     if imovel["app"]:
         h1.append(plt.Rectangle((0, 0), 1, 1, facecolor="none", edgecolor=est_hoje["edge"],
                                 linewidth=2.0, label=label_hoje))
-    ax1.legend(handles=h1, loc="upper center", bbox_to_anchor=(0.5, -0.07), ncol=2, fontsize=8, framealpha=0.9)
+    ax1.legend(handles=h1, loc="upper center", bbox_to_anchor=(0.5, -0.02), ncol=2, fontsize=8, framealpha=0.9)
 
     h2 = [plt.Rectangle((0, 0), 1, 1, facecolor=ESTILO["perimetro"]["face"],
                         edgecolor=ESTILO["perimetro"]["edge"], alpha=0.7,
@@ -667,14 +641,41 @@ def gerar_comparativo(imovel: dict, saida: str | Path, feicao: str = "app") -> P
     if imovel["app"]:
         h2.append(plt.Rectangle((0, 0), 1, 1, facecolor=est_em_dia["face"],
                                 alpha=0.8, label=label_meta))
-    ax2.legend(handles=h2, loc="upper center", bbox_to_anchor=(0.5, -0.07), ncol=2, fontsize=8, framealpha=0.9)
+    ax2.legend(handles=h2, loc="upper center", bbox_to_anchor=(0.5, -0.02), ncol=2, fontsize=8, framealpha=0.9)
+
+    # Inserção do Quadro de Áreas (ACTION-031)
+    import analise
+    an = analise.analisar(imovel)
+    if feicao == "app":
+        q_decl = an.get("app_area_decl_ha", 0.0)
+        q_legal = an.get("app_area_legal_ha", 0.0)
+        q_falta = an.get("app_falta_ha", 0.0)
+        texto_quadro = (
+            "RESUMO DA ÁREA (Beira do Rio)\n"
+            f"• O que você tem hoje: {q_decl} ha\n"
+            f"• O que a lei exige: {q_legal} ha\n"
+            f"• Falta recuperar: {q_falta} ha"
+        )
+    else:
+        q_decl = an.get("rl_proposta_ha", 0.0)
+        q_legal = an.get("rl_exigida_ha", 0.0)
+        q_falta = an.get("rl_deficit_ha", 0.0)
+        texto_quadro = (
+            "RESUMO DA ÁREA (Reserva Legal)\n"
+            f"• O que você tem hoje: {q_decl} ha\n"
+            f"• O que a lei exige: {q_legal} ha\n"
+            f"• Falta recuperar: {q_falta} ha"
+        )
+
+    fig.text(0.5, 0.03, texto_quadro, ha="center", va="bottom", fontsize=10, 
+             bbox=dict(facecolor='#f0f0f0', alpha=0.9, edgecolor='#cccccc', boxstyle='round,pad=0.6'))
 
     municipio = imovel["attrs"].get("municipio", "")
     uf = imovel["attrs"].get("uf", "")
     fig.suptitle(f"Comparativo da beira do rio - {municipio}/{uf}".strip(" -/"), fontsize=13, weight="bold", y=0.98)
 
     fig.tight_layout()
-    fig.subplots_adjust(bottom=0.15)
+    fig.subplots_adjust(bottom=0.25)
     fig.savefig(saida, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return saida

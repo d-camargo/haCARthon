@@ -2704,3 +2704,142 @@ PY
 - Plotada a letra `"N"` na ponta da seta usando `ax.text(...)` em coordenadas `ax.transAxes`, com cor branca em negrito de tamanho `12` e uma caixa de fundo preta translúcida (`alpha=0.5`) para excelente legibilidade sobre qualquer cobertura de satélite.
 - Replicação feita em ambos os métodos `gerar_mapa` e `gerar_comparativo`.
 - Testado e verificado com sucesso.
+
+---
+
+## ACTION-030 — Usar Imagem (Asset) como Rosa dos Ventos
+
+status: concluida
+tipo: codigo
+prioridade: media
+
+### Objetivo
+
+O usuário achou a seta desenhada matematicamente pelo Matplotlib "feia" e forneceu um arquivo próprio com o ícone de Rosa dos Ventos que devemos utilizar. Vamos substituir a lógica de desenho de flecha (`ax.annotate`) por uma inserção de imagem (`OffsetImage`) da bússola girada.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+- `src/terra-em-dia-bot/assets/seta_norte.png`
+
+### Passos
+
+1. A imagem base fornecida pelo usuário já foi convertida para PNG e movida para `src/terra-em-dia-bot/assets/seta_norte.png`. Se você ainda vir referências a .webp, ignore e use o .png para evitar problemas no Matplotlib.
+2. Em `mapa.py`, **apague** todo o bloco de código que você acabou de escrever na ACTION-029 (o cálculo de `dx, dy`, `ax.annotate` e o `ax.text` do N).
+3. No lugar desse bloco, carregue a imagem da seta do norte e rotacione-a usando `PIL.Image`. Como a imagem vai ser colada em coordenadas fixas de tela, ela precisa sofrer a rotação de `theta` graus:
+   ```python
+   from PIL import Image
+   from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+   from pathlib import Path
+   
+   # Carrega o PNG da seta do norte
+   caminho_seta = Path(__file__).parent / "assets" / "seta_norte.png"
+   img_seta = Image.open(caminho_seta)
+   
+   # O PIL.Image.rotate gira no sentido anti-horário nativamente (o mesmo da nossa matriz matemática t)
+   # expand=True impede que a bússola tenha as pontas cortadas quando girar 45 graus, por exemplo.
+   img_girada = img_seta.rotate(theta, expand=True)
+   
+   # Crie a caixa de anotação com a imagem (o zoom=0.15 pode precisar de ajuste dependendo da resolução original do ícone)
+   imagebox = OffsetImage(img_girada, zoom=0.15)
+   
+   # Cole no canto superior direito (axes fraction) sem borda (frameon=False)
+   ab = AnnotationBbox(imagebox, (0.92, 0.85), xycoords='axes fraction', frameon=False)
+   ax.add_artist(ab)
+   ```
+4. Aplique a mesma inserção em `gerar_mapa` e `gerar_comparativo` (para cada painel `ax1`, `ax2`).
+5. **Ajuste fino:** Verifique visualmente (salvando imagens em `/tmp/`) se o `zoom=0.15` deixou a seta de um bom tamanho (não muito gigante, nem imperceptível).
+6. **Commit e push**. Mensagem: `Bot: substitui desenho de norte por rosa dos ventos carregada de asset de imagem`.
+
+### Comandos de validação
+
+```bash
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import mapa, cadastro
+imv = cadastro.carregar_imovel(open("data/imoveis_teste.local.txt").readline().strip())
+mapa.gerar_mapa(imv, "/tmp/teste_bussola.png")
+mapa.gerar_comparativo(imv, "/tmp/teste_bussola_cmp.png")
+print("OK. Olhar visualmente a imagem gerada e garantir que a rosa dos ventos esta no mapa.")
+PY
+```
+
+### Critérios de aceite
+
+- O ícone customizado de Seta do Norte está presente na tela.
+- Ele continua apontando para a direção certa independentemente da rotação aplicada.
+
+### Resultado do executor
+
+- Removida a lógica de desenho vetorial anterior.
+- Adicionado carregamento de `src/terra-em-dia-bot/assets/seta_norte.png`.
+- Implementada rotação dinâmica da imagem usando `PIL.Image.rotate(theta, expand=True)` e inserção no Matplotlib com `OffsetImage` (zoom de 0.15) e `AnnotationBbox` em coordenadas `axes fraction` no ponto `(0.92, 0.85)`.
+- Validada visualmente a renderização do ícone.
+
+---
+
+## ACTION-031 — Inserir Quadro de Áreas (Resumo) no Mapa Comparativo
+
+status: concluida
+tipo: codigo
+prioridade: media
+
+### Objetivo
+
+O usuário solicitou que, no mapa comparativo, exista um "quadro de áreas" claro informando o que o produtor tem hoje e o que ele precisa ter. Esse quadro consolida as métricas numa tabelinha elegante para evitar confusões e evitar que o usuário tenha que ficar subtraindo valores de cabeça a partir das duas legendas soltas.
+
+### Arquivos permitidos
+
+- `src/terra-em-dia-bot/mapa.py`
+
+### Passos
+
+1. Em `mapa.py`, na função `gerar_comparativo`, aproveite o momento em que você extrai as métricas de área (seja da APP ou da RL):
+   ```python
+   # Exemplo para APP (já existente no código, você só precisa pegar os valores):
+   res_app = geo_app.medir_app(imovel)
+   ha_decl = res_app.get("app_area_decl_ha", 0.0)
+   ha_legal = res_app.get("app_area_legal_ha", 0.0)
+   ha_falta = res_app.get("app_falta_ha", 0.0)
+   ```
+2. Monte uma string multilinha (formatada de forma amigável) para o quadro:
+   ```python
+   texto_quadro = (
+       "RESUMO DA ÁREA (Beira do Rio)\n"
+       f"• O que você tem hoje: {ha_decl} ha\n"
+       f"• O que a lei exige: {ha_legal} ha\n"
+       f"• Falta recuperar: {ha_falta} ha"
+   )
+   ```
+3. Use `fig.text()` para carimbar esse quadro na parte inferior central da imagem global do comparativo (abaixo dos dois mapas e das legendas individuais).
+   ```python
+   fig.text(0.5, 0.03, texto_quadro, ha="center", va="bottom", fontsize=10, 
+            bbox=dict(facecolor='#f0f0f0', alpha=0.9, edgecolor='#cccccc', boxstyle='round,pad=0.6'))
+   ```
+4. **Importante para o Layout:** Como esse quadro vai ocupar espaço na margem inferior, aumente a folga da base nos subplots para não "amassar" nada.
+   Mude de `fig.subplots_adjust(bottom=0.15)` para `fig.subplots_adjust(bottom=0.25)`. E se as legendas (`ax.legend`) estiverem com `bbox_to_anchor=(0.5, -0.07)`, elas ficarão entre os mapas e o quadro de resumo. Se ficarem muito juntas, empurre as legendas um pouquinho mais para cima (ex: `bbox_to_anchor=(0.5, -0.02)`).
+5. Valide rodando o gerador local e verifique a foto salva `/tmp/`.
+6. **Commit e push**. Mensagem: `Bot: adiciona quadro resumo de areas no rodape do mapa comparativo`.
+
+### Comandos de validação
+
+```bash
+PYTHONPATH=src/terra-em-dia-bot src/terra-em-dia-bot/.venv/bin/python - <<'PY'
+import mapa, cadastro
+imv = cadastro.carregar_imovel(open("data/imoveis_teste.local.txt").readline().strip())
+mapa.gerar_comparativo(imv, "/tmp/teste_quadro_cmp.png")
+print("OK. Olhar visualmente a imagem gerada e garantir que o quadro de resumo das áreas está alinhado e sem sobreposição com as legendas.")
+PY
+```
+
+### Critérios de aceite
+
+- O produtor bate o olho no mapa comparativo e vê um quadro didático sumarizando: área atual, área legal e déficit (agora chamado de "falta recuperar").
+- O layout não corta nenhuma palavra do quadro.
+
+### Resultado do executor
+
+- Implementada a extração de métricas de área a partir de `analise.analisar(imovel)`.
+- Gerado o quadro de resumo dinâmico para a feição correspondente (APP ou RL).
+- Inserido o texto do quadro com `fig.text()` no rodapé central, formatado dentro de um retângulo estilizado (`#f0f0f0` com bordas arredondadas).
+- Ajustadas as coordenadas da legenda (`bbox_to_anchor=(0.5, -0.02)`) e folga de subplot (`fig.subplots_adjust(bottom=0.25)`) para evitar qualquer colisão.
+- Validada com sucesso a imagem resultante.
