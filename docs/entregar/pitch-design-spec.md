@@ -69,13 +69,15 @@
 - **Sem rodapé** (é capa).
 
 ### Slide 2 — O tamanho do problema
-- **Layout:** número-herói centralizado.
+- **Layout:** número-herói centralizado, com uma linha de escala embaixo.
 - **Texto na tela:**
-  - Número: **~10%** (Poppins Bold 150, `#16a34a`)
-  - Linha sob o número: "dos cadastros validados"
-  - Selo/realce: "a retificação que não é atendida — **o gargalo nº 1**"
-- **Visual:** silhueta do mapa do Brasil em `#4d9e3f` 15% atrás do número.
-- **⚠️ Nota:** confirmar o número e a fonte (Painel SFB / *Onde Estamos 2025*) antes de fechar. Se incerto, trocar por "a maior parte ainda não foi validada" (sem número).
+  - Número-herói: **1,1 milhão** (Poppins Bold 150, `#16a34a`)
+  - Linha sob o número: "imóveis parados esperando o produtor responder"
+  - Linha de escala (menor, `#1c2b1f`): "de **8,29 mi** cadastrados (13%) · **154 mi ha** travados (21% da área)"
+  - Selo/fonte (rodapé do slide, 14 pt): "Painel de Regularização Ambiental — SFB · jun/2026"
+- **Visual:** silhueta do mapa do Brasil em `#4d9e3f` 15% atrás do número. Opcional: um pequeno bloco "1 em cada 8 imóveis" como reforço visual do 13%.
+- **Acento lima** pode realçar o "1,1 milhão" ou a palavra "parados".
+- **Dado confirmado** (Painel SFB, 28/06/2026): 1.107.749 de 8.292.805 imóveis (13,4%); 153,8 mi ha (21,4%). Memória de cálculo e fonte em `evidencias-pitch.md`. ⚠️ Conferir se o painel mudou no dia da gravação.
 
 ### Slide 3 — O buraco (slide de virada)
 - **Fundo:** verde-floresta `#14532d`, texto off-white.
@@ -134,4 +136,4 @@
 - **Ritmo de cor:** claro (1,2) → escuro (3) → claro (4,5,6,7) → escuro (8). Dá respiro e ênfase.
 - **Acento lima** só em: número-herói (slide 2) e cartão "mede o entendimento" (slide 6). Não espalhar.
 - **Exportar** como apresentação 16:9; a equipe grava a narração por cima (voz humana, ≤3:00).
-- **Pendências de conteúdo** marcadas com ⚠️ (número do slide 2; números X/Y/Z do slide 5) — preencher com o imóvel-demo antes de gravar.
+- **Pendências de conteúdo** marcadas com ⚠️: números X/Y/Z da Reserva Legal do slide 5 — preencher com o imóvel-demo (herói) antes de gravar. (O número do slide 2 já está fechado — ver `evidencias-pitch.md`.)

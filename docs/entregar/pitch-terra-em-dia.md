@@ -17,9 +17,9 @@
 > "Seu Raimundo é pequeno produtor. Um dia chega uma carta sobre o CAR — o cadastro ambiental do sítio dele. Ele não entende o que é pra fazer. Tem medo de mexer e fazer errado. Então faz o mais seguro: não faz nada. E sem entender, ele não regulariza, não acessa crédito e o mato da beira do rio não é recuperado."
 
 ### Slide 2 — O tamanho do problema · 0:25–0:45
-**[Tela]** Mapa do Brasil + número grande: *"~10% dos cadastros validados"*. Subtítulo: *"a retificação que não é atendida — o gargalo nº 1."*
+**[Tela]** Mapa do Brasil + número-herói **1,1 milhão**. Sub: *"imóveis parados esperando o produtor responder"*. Linha de escala: *de 8,29 mi cadastrados (13%) · **154 mi ha travados** (21% da área)*. Selo/fonte: *Painel de Regularização Ambiental — SFB (jun/2026)*.
 **[Narração]**
-> "E não é só ele. A maior parte dos cadastros ainda não foi validada. A própria coordenação aponta um gargalo: a retificação que o produtor precisa fazer — e não faz, porque não entende o que a lei pede da terra dele."
+> "E não é só ele. São mais de oito milhões de cadastros no país — e **mais de um milhão estão parados, esperando o produtor responder** uma notificação. Um milhão de propriedades, mais de cento e cinquenta milhões de hectares, travados — não por falta de tecnologia, mas porque o produtor **não entendeu o que precisa fazer**."
 
 ### Slide 3 — O buraco (por que ninguém resolveu) · 0:45–1:05
 **[Tela]** Print do "Tô em Dia / Meu Imóvel Rural" ao lado de um trecho do Código Florestal. Título: *"As ferramentas oficiais traduzem o crédito — não a obrigação ambiental."*
@@ -66,7 +66,7 @@
 | 8 Fecho | 2:50–3:00 | tagline |
 
 ## Antes de gravar — conferir
-- [ ] **Número de validação** do slide 2: confirmar o dado (~10%) e a fonte (Painel SFB / estudo *Onde Estamos 2025*) antes de afirmar. Se houver dúvida, trocar por "a maior parte ainda não foi validada".
+- [x] **Número do slide 2** confirmado: 1.107.749 imóveis parados (13,4%) · 153,8 mi ha (21,4%). Fonte: **Painel de Regularização Ambiental do SFB**, acesso 28/06/2026 (ver `evidencias-pitch.md`). Conferir se o painel mudou no dia da gravação.
 - [ ] **Voz humana** (não IA) — exigência do edital.
 - [ ] Slides com **pouco texto**; os 2 mapas e 1 print do bot bem visíveis.
 - [ ] Ensaiar com cronômetro; **não passar de 3:00**.
